@@ -1,6 +1,8 @@
-# 🏋️ CalisHome — SaaS Comercial de Calistenia en Casa (PWA + API Spring Boot)
+# 🏋️ CalisTrainer — Plataforma de Entrenamiento & Coaching en Casa (PWA + API Spring Boot)
 
-Aplicación web progresiva (**PWA**) lista para lanzamiento comercial que planifica y guía rutinas de calistenia en casa con **100% cero material** (peso corporal, suelo y pared), sobrecarga progresiva adaptativa, modo offline, monetización Freemium y cumplimiento de privacidad **Ley 1581 / GDPR**.
+[![CalisTrainer CI](https://github.com/josezambranol/calis-trainer/actions/workflows/ci.yml/badge.svg)](https://github.com/josezambranol/calis-trainer/actions/workflows/ci.yml)
+
+**CalisTrainer** es una aplicación web progresiva (**PWA**) de entrenamiento personal y calistenia en casa con **100% cero material** (peso corporal, suelo y pared), sobrecarga progresiva adaptativa, coach visual/por voz, modo offline, monetización Freemium y cumplimiento de privacidad **Ley 1581 / GDPR**.
 
 ---
 
@@ -19,7 +21,7 @@ flowchart LR
 ### Estructura del Monorepo
 
 ```text
-calishome/
+calis-trainer/
 ├── .github/workflows/
 │   ├── ci.yml                  # Seguridad Trivy, Maven + Testcontainers, oxlint/Vitest/Vite
 │   └── deploy.yml              # Build GHCR + Staging automático + Producción con aprobación manual
