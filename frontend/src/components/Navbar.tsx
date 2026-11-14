@@ -1,5 +1,6 @@
 import React from 'react';
-import { Flame, Bell, User, LogOut, Dumbbell, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Flame, Bell, User, LogOut, Dumbbell, Sparkles, Crown } from 'lucide-react';
 import type { UserProfile } from '../types';
 import { sendTestNotification, requestNotificationPermission } from '../utils/notifications';
 
@@ -69,6 +70,18 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right Actions */}
         <div className="flex items-center space-x-2 sm:space-x-3">
+          <Link
+            to="/plans"
+            className={`flex items-center space-x-1.5 text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all ${
+              user?.planTier === 'PREMIUM'
+                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20'
+            }`}
+          >
+            <Crown className="w-3.5 h-3.5" />
+            <span>{user?.planTier === 'PREMIUM' ? 'PRO' : 'Planes'}</span>
+          </Link>
+
           {/* Quick Notification Test Button */}
           <button
             onClick={handleTestNotification}

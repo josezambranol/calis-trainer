@@ -71,4 +71,30 @@ describe('Phase 3 frontend contracts & schemas', () => {
     });
     expect(mismatch.success).toBe(false);
   });
+
+  it('maps PREMIUM plan tier cleanly from backend user DTO', () => {
+    const proUser = mapBackendUser({
+      id: '22222222-2222-2222-2222-222222222222',
+      email: 'pro@calishome.app',
+      fullName: 'Atleta Pro',
+      emailVerified: true,
+      role: 'USER',
+      planTier: 'PREMIUM',
+      level: 'avanzado',
+      goal: 'fuerza_hipertrofia',
+      durationMinutes: 45,
+      scheduledDays: ['lunes', 'miercoles', 'viernes'],
+      reminderTime: '18:00',
+      timezone: 'America/Bogota',
+      notificationsEnabled: true,
+      soundEnabled: true,
+      voiceCoachEnabled: true,
+      streak: 10,
+      lastCompletedLocalDate: '2026-11-13',
+      totalWorkoutsCompleted: 25,
+      adaptationScore: 2,
+    });
+
+    expect(proUser.planTier).toBe('PREMIUM');
+  });
 });

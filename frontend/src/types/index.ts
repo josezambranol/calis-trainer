@@ -90,3 +90,73 @@ export interface WorkoutLog {
   feedback: WorkoutFeedback;
   adaptationScoreAfter?: number;
 }
+
+export interface WorkoutAnalytics {
+  totalWorkouts: number;
+  totalMinutes: number;
+  currentStreak: number;
+  adaptationScore: number;
+  workoutsLast7Days: number;
+  workoutsLast30Days: number;
+  tooEasyCount: number;
+  justRightCount: number;
+  tooHardCount: number;
+}
+
+export interface BillingPlan {
+  code: string;
+  name: string;
+  billingCycle: string;
+  amountCents: number;
+  currency: string;
+  formattedPrice: string;
+  recommended: boolean;
+  features: string[];
+}
+
+export interface BillingPlansResponse {
+  provider: string;
+  sandboxMode: boolean;
+  plans: BillingPlan[];
+}
+
+export interface SubscriptionDetails {
+  id: string;
+  provider: string;
+  planCode: string;
+  status: 'PENDING' | 'ACTIVE' | 'IN_GRACE' | 'PAST_DUE' | 'CANCELED' | string;
+  externalReference: string;
+  amountCents: number;
+  currency: string;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  graceUntil: string | null;
+  cancelAtPeriodEnd: boolean;
+  canceledAt: string | null;
+}
+
+export interface BillingOverview {
+  effectivePlanTier: 'FREE' | 'PREMIUM' | string;
+  hasAnalyticsAccess: boolean;
+  maxWorkoutHistoryVisible: number;
+  maxPushDevices: number;
+  provider: string;
+  sandboxMode: boolean;
+  subscription: SubscriptionDetails | null;
+}
+
+export interface CheckoutSessionResponse {
+  provider: string;
+  sandboxMode: boolean;
+  planCode: string;
+  externalReference: string;
+  amountCents: number;
+  currency: string;
+  checkoutUrl: string;
+}
+
+export interface WebhookAckResponse {
+  outcome: string;
+  externalReference: string;
+  subscriptionStatus: string;
+}

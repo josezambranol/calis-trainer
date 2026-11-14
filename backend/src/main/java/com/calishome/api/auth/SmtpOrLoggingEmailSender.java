@@ -51,6 +51,24 @@ public class SmtpOrLoggingEmailSender implements EmailSender {
         dispatch(toEmail, subject, body, "PASSWORD_RESET");
     }
 
+    @Override
+    public void sendPaymentReceipt(
+            String toEmail,
+            String fullName,
+            String planName,
+            String formattedAmount,
+            String reference) {
+        String subject = "Recibo de suscripción CalisHome (" + planName + ")";
+        String body = "Hola " + fullName + ",\n\n"
+                + "Tu pago ha sido confirmado exitosamente:\n"
+                + "- Plan: " + planName + "\n"
+                + "- Monto: " + formattedAmount + "\n"
+                + "- Referencia: " + reference + "\n\n"
+                + "Ya tienes acceso completo a CalisHome Pro.\n"
+                + "Puedes gestionar tu suscripción en: " + authProperties.frontendUrl() + "/plans";
+        dispatch(toEmail, subject, body, "PAYMENT_RECEIPT");
+    }
+
     private void dispatch(String toEmail, String subject, String body, String type) {
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
         if (mailSender != null && mailHost != null && !mailHost.isBlank()) {

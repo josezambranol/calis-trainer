@@ -10,6 +10,8 @@ public interface WorkoutLogRepository extends JpaRepository<WorkoutLogEntity, UU
 
     List<WorkoutLogEntity> findByUserIdOrderByCompletedAtDesc(UUID userId, Pageable pageable);
 
+    List<WorkoutLogEntity> findByUserIdOrderByCompletedAtDesc(UUID userId);
+
     boolean existsByUserIdAndLocalDateAndRoutineTitleAndDurationSeconds(
             UUID userId,
             LocalDate localDate,

@@ -32,6 +32,12 @@ const VerifyEmailPage = lazy(() =>
 const ResetPasswordPage = lazy(() =>
   import('./pages/AuthActionPages').then((m) => ({ default: m.ResetPasswordPage }))
 );
+const PlansPage = lazy(() =>
+  import('./pages/PlansPage').then((m) => ({ default: m.PlansPage }))
+);
+const SandboxCheckoutPage = lazy(() =>
+  import('./pages/SandboxCheckoutPage').then((m) => ({ default: m.SandboxCheckoutPage }))
+);
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -396,6 +402,8 @@ export function App() {
         <Route path="/forgot-password" element={<HomeWorkspace key="forgot" initialAuthModalMode="forgot" />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/plans" element={<PlansPage />} />
+        <Route path="/billing/sandbox-checkout" element={<SandboxCheckoutPage />} />
         <Route path="*" element={<HomeWorkspace key="fallback" />} />
       </Routes>
     </Suspense>

@@ -1,8 +1,10 @@
 package com.calishome.api.notifications;
 
+import com.calishome.api.billing.BillingService;
 import com.calishome.api.common.util.TrainingDayUtil;
 import com.calishome.api.common.web.ApiException;
 import com.calishome.api.common.web.ResourceNotFoundException;
+import com.calishome.api.users.PlanTier;
 import com.calishome.api.users.UserEntity;
 import com.calishome.api.users.UserProfileEntity;
 import com.calishome.api.users.UserProfileRepository;
@@ -62,7 +64,7 @@ public class NotificationService {
 
     @Transactional
     public NotificationStatusResponse subscribe(UUID userId, PushSubscribeRequest request, String userAgent) {
-        userRepository.findByIdAndDeletedAtIsNull(userId)
+        UserEntity user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado."));
 
         String endpoint = PushEndpointValidator.validateExternalHttpsEndpoint(request.endpoint());
@@ -76,6 +78,21 @@ public class NotificationService {
                     "Este endpoint Push ya está asociado a otra cuenta.",
                     "push-endpoint-ownership-conflict"
             );
+        }
+
+        if (entity.getId() == null) {
+            long existingCount = subscriptionRepository.countByUserId(userId);
+            int maxDevices = user.getPlanTier() == PlanTier.PREMIUM
+                    ? BillingService.PRO_MAX_PUSH_DEVICES
+                    : BillingService.FREE_MAX_PUSH_DEVICES;
+            if (existingCount >= maxDevices) {
+                throw new ApiException(
+                        HttpStatus.FORBIDDEN,
+                        "Límite de dispositivos del plan",
+                        "Tu plan actual permite hasta " + maxDevices + " dispositivo(s) con recordatorios Push. Actualiza a CalisHome Pro para conectar más.",
+                        "plan-upgrade-required"
+                );
+            }
         }
 
         entity.setUserId(userId);

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Play,
@@ -15,7 +16,9 @@ import {
   Sparkles,
   TrendingUp,
   Sliders,
-  Dumbbell
+  Dumbbell,
+  Crown,
+  Lock,
 } from 'lucide-react';
 import type {
   DailyRoutine,
@@ -27,7 +30,8 @@ import type {
   WorkoutLog,
 } from '../types';
 import { DAYS_MAP } from '../utils/routineGenerator';
-import { notificationApi } from '../services/api';
+import { notificationApi, workoutApi } from '../services/api';
+import { ApiError } from '../services/apiClient';
 import {
   getExistingPushSubscription,
   isPushSupported,
@@ -91,6 +95,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
     staleTime: 60 * 1000,
   });
 
+  const analyticsQuery = useQuery({
+    queryKey: ['workoutAnalytics'],
+    queryFn: () => workoutApi.getAnalytics(),
+    enabled: isAuthenticated && user.planTier === 'PREMIUM',
+    staleTime: 30 * 1000,
+  });
+
   useEffect(() => {
     let cancelled = false;
     void getExistingPushSubscription().then((sub) => {
@@ -117,9 +128,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
       }
       await queryClient.invalidateQueries({ queryKey: ['notificationStatus'] });
     } catch (err) {
-      setNotificationMsg(
-        err instanceof Error ? `⚠️ ${err.message}` : '⚠️ No se pudo actualizar Web Push.'
-      );
+      if (err instanceof ApiError && err.status === 403) {
+        setNotificationMsg(`⚠️ ${err.detail}`);
+      } else {
+        setNotificationMsg(
+          err instanceof Error ? `⚠️ ${err.message}` : '⚠️ No se pudo actualizar Web Push.'
+        );
+      }
     } finally {
       setPushBusy(false);
       setTimeout(() => setNotificationMsg(''), 4500);
@@ -520,6 +535,85 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </section>
 
+      {/* 2B. ANALÍTICAS AVANZADAS (CALISHOME PRO) */}
+      <section className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+          <div>
+            <h3 className="text-lg font-bold text-white flex items-center space-x-2">
+              <Crown className="w-5 h-5 text-amber-400" />
+              <span>Analíticas Pro de Rendimiento</span>
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">
+              Seguimiento de minutos totales, consistencia reciente y distribución de esfuerzo.
+            </p>
+          </div>
+          <Link
+            to="/plans"
+            className="inline-flex items-center justify-center space-x-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-emerald-500 hover:text-slate-950 border border-slate-700 text-xs font-bold text-slate-200 transition-colors shrink-0"
+          >
+            <Crown className="w-3.5 h-3.5" />
+            <span>{user.planTier === 'PREMIUM' ? 'Gestionar Suscripción' : 'Pasar a Pro'}</span>
+          </Link>
+        </div>
+
+        {isAuthenticated && user.planTier === 'PREMIUM' ? (
+          analyticsQuery.data ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800">
+                <span className="text-[11px] uppercase font-bold text-slate-400">Volumen Total</span>
+                <p className="text-2xl font-black text-white mt-1">
+                  {analyticsQuery.data.totalMinutes} <span className="text-xs font-semibold text-emerald-400">min</span>
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5">{analyticsQuery.data.totalWorkouts} sesiones completadas</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800">
+                <span className="text-[11px] uppercase font-bold text-slate-400">Últimos 7 / 30 días</span>
+                <p className="text-2xl font-black text-emerald-400 mt-1">
+                  {analyticsQuery.data.workoutsLast7Days} <span className="text-sm text-slate-500">/ {analyticsQuery.data.workoutsLast30Days}</span>
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5">Frecuencia semanal y mensual</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800">
+                <span className="text-[11px] uppercase font-bold text-slate-400">Racha / Adaptación</span>
+                <p className="text-2xl font-black text-orange-400 mt-1">
+                  {analyticsQuery.data.currentStreak}d <span className="text-sm text-slate-400">· {analyticsQuery.data.adaptationScore >= 0 ? `+${analyticsQuery.data.adaptationScore}` : analyticsQuery.data.adaptationScore}</span>
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5">Nivel de sobrecarga activa</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800">
+                <span className="text-[11px] uppercase font-bold text-slate-400">Feedback Percibido</span>
+                <div className="mt-1.5 flex items-center gap-2 text-xs font-bold">
+                  <span className="text-emerald-400">🟢 {analyticsQuery.data.tooEasyCount}</span>
+                  <span className="text-sky-400">⚡ {analyticsQuery.data.justRightCount}</span>
+                  <span className="text-rose-400">🔴 {analyticsQuery.data.tooHardCount}</span>
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">Ligero · Óptimo · Exigente</p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400">Cargando métricas Pro...</p>
+          )
+        ) : (
+          <div className="rounded-2xl bg-slate-950/70 border border-slate-800 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start space-x-3">
+              <Lock className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <div className="text-xs space-y-1">
+                <p className="font-bold text-white">Analíticas detalladas reservadas para CalisHome Pro</p>
+                <p className="text-slate-400">
+                  Desbloquea historial ampliado, balance semanal de cargas y hasta 5 dispositivos Push sincronizados.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/plans"
+              className="shrink-0 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black transition-colors text-center"
+            >
+              Desbloquear Pro
+            </Link>
+          </div>
+        )}
+      </section>
+
       {/* 3. PLAN SEMANAL COMPLETO */}
       <section className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
@@ -712,10 +806,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* 5. HISTORIAL DE ENTRENAMIENTOS */}
       {workoutLogs.length > 0 && (
         <section className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center space-x-2">
-            <Award className="w-5 h-5 text-emerald-400" />
-            <span>Tus Entrenamientos Completados</span>
-          </h3>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <h3 className="text-lg font-bold text-white flex items-center space-x-2">
+              <Award className="w-5 h-5 text-emerald-400" />
+              <span>Tus Entrenamientos Completados</span>
+            </h3>
+            {user.planTier !== 'PREMIUM' && workoutLogs.length >= 5 && (
+              <Link
+                to="/plans"
+                className="text-[11px] font-semibold text-amber-300 hover:text-amber-200 underline underline-offset-2"
+              >
+                Mostrando últimas 5 (Plan Gratis) · Ampliar a Pro
+              </Link>
+            )}
+          </div>
 
           <div className="space-y-2">
             {workoutLogs.map((log) => {

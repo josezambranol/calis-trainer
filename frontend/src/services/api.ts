@@ -1,4 +1,7 @@
 import type {
+  BillingOverview,
+  BillingPlansResponse,
+  CheckoutSessionResponse,
   DailyRoutine,
   DayOfWeek,
   Exercise,
@@ -6,7 +9,9 @@ import type {
   SessionDuration,
   UserLevel,
   UserProfile,
+  WebhookAckResponse,
   WeeklyPlanResponse,
+  WorkoutAnalytics,
   WorkoutFeedback,
   WorkoutLog,
 } from '../types';
@@ -273,6 +278,10 @@ export const workoutApi = {
     return dtos.map(mapBackendWorkoutLog);
   },
 
+  getAnalytics(): Promise<WorkoutAnalytics> {
+    return apiRequest<WorkoutAnalytics>('/api/v1/workouts/analytics');
+  },
+
   async complete(payload: {
     routineTitle: string;
     durationSeconds: number;
@@ -343,6 +352,41 @@ export const notificationApi = {
   sendTest(): Promise<PushTestResponse> {
     return apiRequest<PushTestResponse>('/api/v1/notifications/test', {
       method: 'POST',
+    });
+  },
+};
+
+export const billingApi = {
+  getPlans(): Promise<BillingPlansResponse> {
+    return apiRequest<BillingPlansResponse>('/api/v1/billing/plans', {
+      auth: false,
+    });
+  },
+
+  getOverview(): Promise<BillingOverview> {
+    return apiRequest<BillingOverview>('/api/v1/billing/subscription');
+  },
+
+  createCheckout(planCode: 'pro_monthly' | 'pro_yearly'): Promise<CheckoutSessionResponse> {
+    return apiRequest<CheckoutSessionResponse>('/api/v1/billing/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ planCode }),
+    });
+  },
+
+  cancelSubscription(): Promise<BillingOverview> {
+    return apiRequest<BillingOverview>('/api/v1/billing/subscription/cancel', {
+      method: 'POST',
+    });
+  },
+
+  completeSandbox(payload: {
+    externalReference: string;
+    transactionStatus: 'APPROVED' | 'DECLINED' | 'VOIDED';
+  }): Promise<WebhookAckResponse> {
+    return apiRequest<WebhookAckResponse>('/api/v1/billing/sandbox/complete', {
+      method: 'POST',
+      body: JSON.stringify(payload),
     });
   },
 };

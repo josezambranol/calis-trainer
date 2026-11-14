@@ -60,3 +60,14 @@ app:
     global-rate-limit:
       enabled: ${GLOBAL_RATE_LIMIT_ENABLED:true}
       requests-per-minute: ${GLOBAL_RATE_LIMIT_RPM:120}
+  billing:
+    provider: ${BILLING_PROVIDER:wompi}
+    checkout-base-url: https://checkout.wompi.co/p/
+    public-key: ${WOMPI_PUBLIC_KEY:}
+    integrity-secret: ${WOMPI_INTEGRITY_SECRET:}
+    events-secret: ${WOMPI_EVENTS_SECRET:}
+    currency: COP
+    pro-monthly-cents: 1990000
+    pro-yearly-cents: 15900000
+    grace-period-days: 5
+    sandbox-enabled: ${BILLING_SANDBOX_ENABLED:true}

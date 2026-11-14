@@ -43,6 +43,8 @@ app:
     global-rate-limit:
       enabled: true
       requests-per-minute: ${GLOBAL_RATE_LIMIT_RPM:120}
+  billing:
+    sandbox-enabled: false
 
 logging:
   level:

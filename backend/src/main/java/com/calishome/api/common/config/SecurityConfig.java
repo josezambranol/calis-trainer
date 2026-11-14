@@ -176,6 +176,8 @@ public class SecurityConfig {
                                 "/api/v1/exercises/**",
                                 "/api/v1/routines/preview",
                                 "/api/v1/notifications/vapid-public-key",
+                                "/api/v1/billing/plans",
+                                "/api/v1/billing/webhooks/wompi",
                                 "/actuator/health",
                                 "/actuator/health/**",
                                 "/v3/api-docs/**",

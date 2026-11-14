@@ -30,6 +30,9 @@ app:
     global-rate-limit:
       enabled: false
       requests-per-minute: 120
+  billing:
+    events-secret: test-wompi-events-secret-2026
+    sandbox-enabled: true
 
 logging:
   level:

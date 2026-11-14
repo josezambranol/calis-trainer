@@ -38,6 +38,13 @@ public class WorkoutController {
         return workoutService.listWorkouts(userId, limit);
     }
 
+    @GetMapping("/analytics")
+    @Operation(summary = "Obtener analíticas avanzadas de entrenamiento (Plan Pro)")
+    public WorkoutAnalyticsResponse getAnalytics(@AuthenticationPrincipal Jwt jwt) {
+        UUID userId = UUID.fromString(jwt.getSubject());
+        return workoutService.getAnalytics(userId);
+    }
+
     @PostMapping
     @Operation(summary = "Registrar entrenamiento completado, recalcular racha y adaptación")
     public ResponseEntity<CompleteWorkoutResponse> completeWorkout(
