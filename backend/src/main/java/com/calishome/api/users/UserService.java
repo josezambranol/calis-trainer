@@ -1,10 +1,14 @@
 package com.calishome.api.users;
 
+import com.calishome.api.auth.RefreshTokenRepository;
+import com.calishome.api.billing.SubscriptionRepository;
 import com.calishome.api.common.util.TrainingDayUtil;
 import com.calishome.api.common.web.ApiException;
 import com.calishome.api.common.web.ResourceNotFoundException;
+import com.calishome.api.notifications.PushSubscriptionRepository;
 import com.calishome.api.workouts.WorkoutLogEntity;
 import com.calishome.api.workouts.WorkoutLogRepository;
+import com.calishome.api.workouts.WorkoutLogResponse;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -26,14 +30,23 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
     private final WorkoutLogRepository workoutLogRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final PushSubscriptionRepository pushSubscriptionRepository;
+    private final SubscriptionRepository subscriptionRepository;
 
     public UserService(
             UserRepository userRepository,
             UserProfileRepository userProfileRepository,
-            WorkoutLogRepository workoutLogRepository) {
+            WorkoutLogRepository workoutLogRepository,
+            RefreshTokenRepository refreshTokenRepository,
+            PushSubscriptionRepository pushSubscriptionRepository,
+            SubscriptionRepository subscriptionRepository) {
         this.userRepository = userRepository;
         this.userProfileRepository = userProfileRepository;
         this.workoutLogRepository = workoutLogRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.pushSubscriptionRepository = pushSubscriptionRepository;
+        this.subscriptionRepository = subscriptionRepository;
     }
 
     @Transactional(readOnly = true)
@@ -233,6 +246,49 @@ public class UserService {
     private UserProfileEntity findProfile(UUID userId) {
         return userProfileRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Perfil de usuario no encontrado."));
+    }
+
+    @Transactional(readOnly = true)
+    public AccountDataExportResponse exportUserData(UUID userId) {
+        UserEntity user = findActiveUser(userId);
+        UserProfileEntity profile = findProfile(userId);
+        List<WorkoutLogResponse> workoutLogs = workoutLogRepository.findByUserIdOrderByCompletedAtDesc(userId)
+                .stream()
+                .map(WorkoutLogResponse::from)
+                .toList();
+        List<AccountDataExportResponse.SubscriptionExportDto> subscriptions =
+                subscriptionRepository.findAllByUserIdOrderByCreatedAtDesc(userId)
+                        .stream()
+                        .map(AccountDataExportResponse.SubscriptionExportDto::from)
+                        .toList();
+        long pushDevices = pushSubscriptionRepository.countByUserId(userId);
+
+        return new AccountDataExportResponse(
+                Instant.now(),
+                "Ley 1581 de 2012 / GDPR Portability Export",
+                UserResponse.from(user, profile),
+                workoutLogs,
+                subscriptions,
+                pushDevices
+        );
+    }
+
+    @Transactional
+    public void deleteAccount(UUID userId) {
+        UserEntity user = findActiveUser(userId);
+        Instant now = Instant.now();
+
+        refreshTokenRepository.revokeAllForUser(userId, now);
+        pushSubscriptionRepository.deleteByUserId(userId);
+
+        user.setEmail("deleted-" + userId + "@deleted.calishome.local");
+        user.setFullName("Cuenta Eliminada");
+        user.setPasswordHash(null);
+        user.setGoogleSub(null);
+        user.setEmailVerified(false);
+        user.setPlanTier(PlanTier.FREE);
+        user.setDeletedAt(now);
+        userRepository.save(user);
     }
 
     private record ParsedImportedLog(

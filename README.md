@@ -1,101 +1,129 @@
-# 🏋️ CalisHome — Monorepo (PWA + API Spring Boot)
+# 🏋️ CalisHome — SaaS Comercial de Calistenia en Casa (PWA + API Spring Boot)
 
-Aplicación web progresiva (**PWA**) para asignar y guiar rutinas de calistenia en casa con **100% cero material** (peso corporal, suelo y pared), sobrecarga progresiva adaptativa y recordatorios programados.
+Aplicación web progresiva (**PWA**) lista para lanzamiento comercial que planifica y guía rutinas de calistenia en casa con **100% cero material** (peso corporal, suelo y pared), sobrecarga progresiva adaptativa, modo offline, monetización Freemium y cumplimiento de privacidad **Ley 1581 / GDPR**.
 
 ---
 
-## 🏗️ Arquitectura del Monorepo
+## 🏗️ Arquitectura del Sistema
+
+```mermaid
+flowchart LR
+    User["Atleta (Navegador / PWA)"] -->|"HTTPS / CSP / Same-Origin :5173"| Web["Frontend React 19 + Nginx<br/>Offline IndexedDB + SW + i18n"]
+    Web -->|"/api/v1/* Reverse Proxy"| Api["Spring Boot 3.5 API (Java 21)<br/>Argon2id · JWT · Rate Limit · Actuator"]
+    Api -->|"Flyway V1..V5 + JPA"| Db[("PostgreSQL 16")]
+    Api -->|"SMTP"| Mail["Mailpit (Dev) / SMTP (Prod)"]
+    Api -->|"VAPID ECDSA P-256"| Push["Web Push Service Worker"]
+    Api -->|"SHA-256 Webhooks"| Pay["Wompi Colombia / Sandbox $0"]
+```
+
+### Estructura del Monorepo
 
 ```text
 calishome/
-├── .github/workflows/ci.yml   # CI: lint, tests y build (Frontend + Backend)
-├── docker-compose.yml         # Orquestación con 1 comando (Postgres + Backend + Frontend)
-├── .env.example               # Plantilla de variables de entorno (sin secretos)
+├── .github/workflows/
+│   ├── ci.yml                  # Seguridad Trivy, Maven + Testcontainers, oxlint/Vitest/Vite
+│   └── deploy.yml              # Build GHCR + Staging automático + Producción con aprobación manual
+├── scripts/
+│   ├── backup-postgres.sh      # pg_dump comprimido + cifrado AES-256 opcional + SHA-256
+│   └── restore-postgres.sh     # Verificación de checksum + restauración + conteo de integridad
 ├── docs/
-│   ├── decisiones.md          # Registro de decisiones arquitectónicas (ADRs)
-│   └── amenazas-fase2.md      # Modelo de amenazas de autenticación
-├── frontend/                  # React 19 + TypeScript + Vite + Tailwind CSS v4 + Vitest
-└── backend/                   # Java 21 + Spring Boot 3.5 + PostgreSQL + Flyway + Testcontainers
+│   ├── decisiones.md           # Registro de decisiones arquitectónicas (ADR-001 .. ADR-015)
+│   ├── amenazas-fase2.md       # Modelo de amenazas de autenticación
+│   ├── auditoria-seguridad-fase5.md # Auditoría OWASP Top 10
+│   └── runbook-produccion.md   # Runbook operativo, despliegue free-tier $0 y DRP
+├── frontend/                   # React 19 + TS + Tailwind v4 + Vitest + Playwright E2E
+├── backend/                    # Java 21 + Spring Boot 3.5 + Postgres + Flyway + Testcontainers
+├── docker-compose.yml          # Stack completo con 1 comando (Postgres + Backend + Nginx + Mailpit)
+└── CHANGELOG.md                # Historial de versiones (v1.0.0)
 ```
 
 ---
 
 ## 🚀 Levantar todo con un solo comando (Docker)
 
-1. Copia el archivo de variables de entorno:
+1. Copia la plantilla de variables de entorno:
    ```bash
    cp .env.example .env
    ```
-2. Levanta PostgreSQL 16, el Backend Spring Boot y el Frontend Nginx:
+2. Levanta PostgreSQL 16, Backend Spring Boot, Frontend Nginx y Mailpit:
    ```bash
-   docker compose up --build
+   docker compose up -d --build
    ```
 3. Accede a los servicios:
-   - **Frontend (PWA):** http://localhost:5173
+   - **Frontend PWA:** http://localhost:5173
+   - **Planes & Sandbox Pro `$0`:** http://localhost:5173/plans
+   - **Cuenta, Export JSON & Eliminación:** http://localhost:5173/account
+   - **OpenAPI / Swagger UI (perfil `dev`):** http://localhost:8080/swagger-ui.html
    - **Backend Health:** http://localhost:8080/api/v1/health
-   - **Swagger / OpenAPI (perfil `dev`):** http://localhost:8080/swagger-ui.html
    - **Mailpit SMTP Web UI (dev):** http://localhost:8026
 
+### 🎯 Credenciales Demo para Portfolio (Modo Sandbox)
+Cuando `APP_DEMO_SEED_ENABLED=true` y `BILLING_SANDBOX_ENABLED=true` (por defecto en Docker local, desactivado en `test` y `prod`), el sistema siembra automáticamente un atleta Pro con historial de 21 días y permite entrar en 1 clic desde **Iniciar Sesión → Entrar como Atleta Demo (Pro)**:
+- **Email:** `demo@calishome.app`
+- **Contraseña:** `DemoCalis2026!`
+
 ---
 
-## 🔐 Endpoints Disponibles (`v1`)
+## 🔐 Endpoints Principales (`v1`)
 
-| Método | Ruta | Descripción | Auth |
+| Dominio | Método y Ruta | Descripción | Auth |
 |---|---|---|---|
-| `GET` | `/api/v1/health` | Estado de la API y PostgreSQL | Público |
-| `GET` | `/api/v1/auth/csrf` | Emite cookie `XSRF-TOKEN` para SPA | Público |
-| `POST` | `/api/v1/auth/register` | Registro con Argon2id + envío de verificación | Público (Rate Limit) |
-| `POST` | `/api/v1/auth/verify-email` | Confirma cuenta con token | Público |
-| `POST` | `/api/v1/auth/resend-verification` | Reenvía correo de verificación | Público (Rate Limit) |
-| `POST` | `/api/v1/auth/login` | Login + Access JWT + Cookie `HttpOnly` refresh | Público (Rate Limit + Lockout) |
-| `POST` | `/api/v1/auth/google` | Login OIDC validando `idToken` con Google JWKS | Público (Rate Limit) |
-| `POST` | `/api/v1/auth/refresh` | Rotación de refresh token + detección de reuso | Cookie + CSRF |
-| `POST` | `/api/v1/auth/logout` | Cierra sesión y revoca familia de tokens | Cookie + CSRF |
-| `POST` | `/api/v1/auth/forgot-password` | Solicita recuperación (anti-enumeración) | Público (Rate Limit) |
-| `POST` | `/api/v1/auth/reset-password` | Restablece clave y revoca sesiones activas | Público |
-| `GET` | `/api/v1/users/me` | Perfil completo del usuario autenticado | Bearer JWT |
-| `GET` | `/api/v1/users/me/profile` | Alias del perfil de entrenamiento autenticado | Bearer JWT |
-| `PATCH` | `/api/v1/users/me/profile` | Actualiza nivel, objetivo, días, horario, zona horaria y audio | Bearer JWT |
-| `POST` | `/api/v1/users/me/import` | Importación idempotente de progreso previo en `localStorage` | Bearer JWT |
-| `GET` | `/api/v1/exercises` | Catálogo de 24 ejercicios (filtros `category`, `difficulty`, `q`) | Público |
-| `GET` | `/api/v1/routines/today` | Rutina determinista de hoy según objetivo y zona horaria | Bearer JWT |
-| `GET` | `/api/v1/routines/weekly` | Plan semanal completo (7 días) del usuario autenticado | Bearer JWT |
-| `POST` | `/api/v1/routines/preview` | Vista previa semanal en onboarding antes de registrarse | Público |
-| `GET` | `/api/v1/workouts` | Historial de sesiones completadas del usuario | Bearer JWT |
-| `POST` | `/api/v1/workouts` | Registra sesión, recalcula racha y `adaptationScore` (`-3` a `+3`) | Bearer JWT |
-| `GET` | `/api/v1/notifications/vapid-public-key` | Clave pública VAPID del servidor para Web Push | Público |
-| `GET` | `/api/v1/notifications/status` | Dispositivos Web Push activos del usuario | Bearer JWT |
-| `POST` | `/api/v1/notifications/subscribe` | Registra o actualiza suscripción Push (`endpoint`, `p256dh`, `auth`) | Bearer JWT |
-| `DELETE` | `/api/v1/notifications/unsubscribe` | Elimina suscripción Push de un dispositivo | Bearer JWT |
-| `POST` | `/api/v1/notifications/test` | Envía notificación Web Push de prueba desde el backend | Bearer JWT |
+| **Salud & Ops** | `GET /api/v1/health`, `/actuator/health`, `/actuator/metrics` | Estado API+DB y métricas | Público (`/health`) / JWT (`/metrics`) |
+| **Auth** | `POST /api/v1/auth/register`, `verify-email`, `login`, `google`, `refresh`, `logout`, `forgot-password`, `reset-password` | Argon2id, JWT 15m, Refresh HttpOnly + CSRF, OIDC | Público / Cookie+CSRF |
+| **Usuario & Privacidad** | `GET/PATCH /api/v1/users/me/profile`, `POST /me/import`, `GET /me/export`, `DELETE /me` | Diagnóstico, exportación JSON ARCO y borrado PII | Bearer JWT |
+| **Rutinas & Catálogo** | `GET /api/v1/exercises`, `POST /api/v1/routines/preview`, `GET /routines/today`, `/weekly` | 24 ejercicios y motor determinista por objetivo/TZ | Público / Bearer JWT |
+| **Entrenos & Analíticas** | `GET/POST /api/v1/workouts`, `GET /api/v1/workouts/analytics` | Registro, sobrecarga `-3..+3` y telemetría Pro | Bearer JWT (`PREMIUM` en `/analytics`) |
+| **Web Push** | `GET /notifications/vapid-public-key`, `status`, `POST subscribe`, `test`, `DELETE unsubscribe` | Notificaciones VAPID + protección SSRF/IDOR | Público / Bearer JWT |
+| **Monetización** | `GET /billing/plans`, `subscription`, `POST checkout`, `subscription/cancel`, `sandbox/complete`, `webhooks/wompi` | Planes Gratis/Pro, Sandbox `$0` y webhook SHA-256 | Público / Bearer JWT / Firma SHA-256 |
 
 ---
 
-## 💻 Desarrollo Local y Pruebas
+## 💻 Pruebas, Calidad y E2E
 
-### Backend (Java 21 + Maven)
+### Backend (Java 21 + Maven + Testcontainers)
 ```bash
 cd backend
-mvn verify
+mvn -B verify
 ```
 
-### Frontend (Node 22+ / Vite)
+### Frontend Unit & Seguridad
 ```bash
 cd frontend
-npm install
 npm run lint
+npm audit --omit=dev --audit-level=high
 npm test
 npm run build
 ```
 
+### Pruebas End-to-End (Playwright sobre Docker Compose + Mailpit)
+```bash
+cd frontend
+npx playwright install chromium
+npm run test:e2e
+```
+
 ---
 
-## 📚 Estado de Fases
+## 🚦 Checklist de Lanzamiento Comercial (`v1.0.0`)
+
+- [x] Autenticación segura (Argon2id, JWT corto + Refresh rotativo HttpOnly, CSRF, lockout, Google OIDC, verificación email).
+- [x] Motor de entrenamiento determinista en backend + racha justa según días programados + sobrecarga progresiva `-3..+3`.
+- [x] Modo Offline-First (Service Worker + IndexedDB cache + cola diferida con sincronización automática al reconectar).
+- [x] Accesibilidad WCAG 2.1 AA (Skip-to-Content, zoom móvil habilitado, atajos `Escape`, atributos ARIA) e i18n `ES/EN`.
+- [x] Seguridad OWASP Top 10 (anti-SSRF, anti-IDOR, CSP/HSTS, rate limit global RFC 7807, `ClientIpResolver`, Trivy CI).
+- [x] Monetización Freemium verificada con firma SHA-256 idempotente, período de gracia y límites por tier en servidor.
+- [x] Cumplimiento Ley 1581 / GDPR (`GET /users/me/export`, `DELETE /users/me`, `/privacy`, `/terms` con Aviso Médico, `/account`).
+- [x] Respaldos PostgreSQL automatizados con prueba real de restauración + Pipeline CI/CD (`staging` → `production`).
+
+---
+
+## 📚 Estado Final del Roadmap
 
 - **Fase 1:** ✅ Monorepo, PostgreSQL + Flyway, `/api/v1/health`, RFC 7807, Docker Compose y CI.
-- **Fase 2:** ✅ Modelo de datos (`V2__core_schema.sql`), Argon2id, JWT + Refresh rotativo (`HttpOnly` + CSRF + reuse detection), verificación de email, recuperación de contraseña, lockout, Bucket4j rate limiting y Google OIDC.
-- **Fase 3:** ✅ Catálogo de 24 ejercicios en PostgreSQL (`V3__seed_exercises.sql`), motor determinista de rutinas por objetivo y zona horaria, historial de entrenamientos, cálculo justo de racha, `React Router` + `TanStack Query` + `react-hook-form` + `Zod`, onboarding previo al registro e importación idempotente desde `localStorage`.
-- **Fase 4:** ✅ Web Push VAPID desde backend (`V4__push_subscriptions.sql` + `nl.martijndwars:web-push`), scheduler por zona horaria con deduplicación diaria y limpieza de `410 Gone`, Mailpit en Docker para correos SMTP dev, PWA instalable con app-shell offline (`sw.js` + `manifest.json`) y code splitting (`React.lazy`).
-- **Fase 5:** ✅ Auditoría y endurecimiento OWASP Top 10 ([`docs/auditoria-seguridad-fase5.md`](docs/auditoria-seguridad-fase5.md)): protección SSRF en Web Push, aislamiento IDOR entre cuentas, CORS restrictivo, headers de seguridad (CSP, HSTS, `X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`), rate limiting global RFC 7807, resolución segura de IP cliente, Dependabot y escaneo Trivy en CI.
-- **Fase 6:** ✅ Monetización Freemium (`V5__billing_subscriptions.sql`): checkout hospedado compatible con Wompi (`COP`) + flujo Sandbox `$0` (deshabilitado en `prod`), verificación SHA-256 de webhooks (`/api/v1/billing/webhooks/wompi`) con idempotencia y tolerancia a eventos desordenados, control de acceso en servidor (`FREE`: 5 sesiones / 1 dispositivo Push vs `PREMIUM`: analíticas Pro `/api/v1/workouts/analytics`, historial hasta 100 sesiones y 5 dispositivos Push), recibos por email y vistas `/plans` y `/billing/sandbox-checkout`.
-- **Siguiente:** Fase 7 (Calidad de producto final: accesibilidad WCAG AA, cola offline de entrenamientos, i18n `es`/`en`, Playwright E2E).
+- **Fase 2:** ✅ Modelo de datos, Argon2id, JWT + Refresh rotativo, verificación SMTP, recuperación, lockout, rate limit y Google OIDC.
+- **Fase 3:** ✅ 24 ejercicios seeded, motor determinista por objetivo y TZ, racha justa, `React Router` + `TanStack Query` + `Zod` + importación idempotente.
+- **Fase 4:** ✅ Web Push VAPID con limpieza `410 Gone`, scheduler TZ, Mailpit, PWA cache seguro y code splitting (`React.lazy`).
+- **Fase 5:** ✅ Auditoría y endurecimiento OWASP Top 10 ([`docs/auditoria-seguridad-fase5.md`](docs/auditoria-seguridad-fase5.md)) + Trivy en CI.
+- **Fase 6:** ✅ Monetización Freemium Wompi COP + Sandbox `$0`, webhooks SHA-256 idempotentes y analíticas Pro.
+- **Fase 7:** ✅ Rediseño Obsidian & Kinetic Volt, IndexedDB offline sync queue, i18n `ES/EN`, WCAG 2.1 AA y Playwright E2E.
+- **Fase 8:** ✅ Privacidad (`export`/`delete`), `/privacy`, `/terms`, `/account`, Demo Pro `$0`, `/actuator/metrics`, backup/restore PostgreSQL, CI/CD `staging`/`production` y [`docs/runbook-produccion.md`](docs/runbook-produccion.md).

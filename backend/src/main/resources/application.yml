@@ -22,7 +22,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics
   endpoint:
     health:
       show-details: when_authorized
@@ -71,3 +71,5 @@ app:
     pro-yearly-cents: 15900000
     grace-period-days: 5
     sandbox-enabled: ${BILLING_SANDBOX_ENABLED:true}
+  demo:
+    seed-enabled: ${APP_DEMO_SEED_ENABLED:false}

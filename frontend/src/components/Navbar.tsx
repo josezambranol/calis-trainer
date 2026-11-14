@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Flame, Bell, User, LogOut, Dumbbell, Sparkles, Crown } from 'lucide-react';
+import { Flame, Bell, User, LogOut, Crown, Zap, Languages, ShieldCheck } from 'lucide-react';
 import type { UserProfile } from '../types';
+import { useI18n } from '../i18n/useI18n';
 import { sendTestNotification, requestNotificationPermission } from '../utils/notifications';
 
 interface NavbarProps {
@@ -17,112 +18,152 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSettings,
   onLogout,
 }) => {
+  const { locale, setLocale, t } = useI18n();
   const [notificationStatus, setNotificationStatus] = React.useState<string>('');
 
   const handleTestNotification = async () => {
     const perm = await requestNotificationPermission();
     if (perm === 'granted') {
       const sent = sendTestNotification();
-      if (sent) {
-        setNotificationStatus('¡Notificación enviada!');
-      } else {
-        setNotificationStatus('Notificación emitida');
-      }
+      setNotificationStatus(sent ? 'Alerta enviada al dispositivo' : 'Notificación emitida');
     } else {
-      setNotificationStatus('Permiso denegado en el navegador');
+      setNotificationStatus('Permiso de notificaciones bloqueado en este navegador');
     }
     setTimeout(() => setNotificationStatus(''), 4000);
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <header className="sticky top-0 z-40 bg-[#07090d]/92 backdrop-blur-md border-b border-white/10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
         {/* Brand */}
-        <div className="flex items-center space-x-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20 text-slate-950 font-black">
-            <Dumbbell className="w-6 h-6 text-slate-950" />
+        <Link
+          to="/"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="flex items-center space-x-3 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8f135] rounded-lg pr-2"
+        >
+          <div className="w-9 h-9 rounded-lg bg-[#c8f135] text-[#05070a] flex items-center justify-center shadow-[0_0_24px_rgba(200,241,53,0.22)] transition-transform group-hover:scale-105">
+            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M5 17L10 7l4 6 5-8" />
+              <circle cx="19" cy="5" r="1.5" fill="currentColor" />
+            </svg>
           </div>
           <div>
-            <div className="flex items-center space-x-1.5">
-              <span className="font-extrabold text-xl tracking-tight text-white">Calis<span className="text-emerald-400">Home</span></span>
-              <span className="text-[10px] uppercase font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded">Cero Material</span>
+            <div className="flex items-center space-x-2">
+              <span className="font-black text-lg tracking-[-0.03em] text-white uppercase">
+                Calis<span className="text-[#c8f135]">Home</span>
+              </span>
+              <span className="hidden sm:inline-block text-[10px] font-bold tracking-widest uppercase px-1.5 py-0.5 rounded bg-white/[0.06] text-zinc-300 border border-white/10">
+                {t.brandTag}
+              </span>
             </div>
-            <p className="text-[11px] text-slate-400 hidden sm:block">Entrenamiento con peso corporal y recordatorios</p>
+            <p className="text-[11px] text-zinc-400 hidden lg:block">{t.brandSub}</p>
           </div>
-        </div>
+        </Link>
 
-        {/* Center / Stats */}
+        {/* Center Telemetry Strip */}
         {user && (
-          <div className="hidden md:flex items-center space-x-6 text-sm">
-            <div className="flex items-center space-x-1.5 bg-slate-800/70 border border-slate-700/60 px-3 py-1.5 rounded-full">
-              <Flame className="w-4 h-4 text-orange-500 fill-orange-500 animate-pulse" />
-              <span className="text-slate-300 font-medium">Racha:</span>
-              <span className="font-bold text-orange-400">{user.streak} {user.streak === 1 ? 'día' : 'días'}</span>
+          <div className="hidden md:flex items-center space-x-3 text-xs ch-tabular">
+            <div className="flex items-center space-x-1.5 bg-white/[0.04] border border-white/10 px-3 py-1.5 rounded-lg">
+              <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400" aria-hidden="true" />
+              <span className="text-zinc-400">{t.navStreak}:</span>
+              <span className="font-black text-white">
+                {user.streak} {user.streak === 1 ? t.navDaySingular : t.navDayPlural}
+              </span>
             </div>
 
-            <div className="flex items-center space-x-1.5 bg-slate-800/70 border border-slate-700/60 px-3 py-1.5 rounded-full">
-              <Sparkles className="w-4 h-4 text-emerald-400" />
-              <span className="text-slate-300 font-medium">Nivel:</span>
-              <span className="font-bold text-emerald-400 capitalize">{user.level}</span>
+            <div className="flex items-center space-x-1.5 bg-white/[0.04] border border-white/10 px-3 py-1.5 rounded-lg">
+              <Zap className="w-3.5 h-3.5 text-[#c8f135]" aria-hidden="true" />
+              <span className="text-zinc-400">{t.navLevel}:</span>
+              <span className="font-bold text-[#c8f135] capitalize">{user.level}</span>
             </div>
           </div>
         )}
 
-        {/* Right Actions */}
-        <div className="flex items-center space-x-2 sm:space-x-3">
+        {/* Right Controls */}
+        <nav aria-label="Navegación principal" className="flex items-center space-x-2">
+          <button
+            type="button"
+            onClick={() => setLocale(locale === 'es' ? 'en' : 'es')}
+            aria-label={locale === 'es' ? 'Switch language to English' : 'Cambiar idioma a Español'}
+            aria-pressed={locale === 'en'}
+            className="flex items-center space-x-1 text-[11px] font-bold bg-white/[0.04] hover:bg-white/[0.09] text-zinc-200 border border-white/10 px-2.5 py-1.5 rounded-lg transition-colors"
+          >
+            <Languages className="w-3.5 h-3.5 text-zinc-400" aria-hidden="true" />
+            <span>{locale.toUpperCase()}</span>
+          </button>
+
           <Link
             to="/plans"
-            className={`flex items-center space-x-1.5 text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded-lg border transition-all ${
+            className={`flex items-center space-x-1.5 text-xs font-extrabold px-3 py-1.5 rounded-lg border transition-colors ${
               user?.planTier === 'PREMIUM'
-                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25'
-                : 'bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20'
+                ? 'bg-[#c8f135]/15 border-[#c8f135]/50 text-[#c8f135] hover:bg-[#c8f135]/25'
+                : 'bg-amber-400/10 border-amber-400/35 text-amber-300 hover:bg-amber-400/20'
             }`}
           >
-            <Crown className="w-3.5 h-3.5" />
-            <span>{user?.planTier === 'PREMIUM' ? 'PRO' : 'Planes'}</span>
+            <Crown className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>{user?.planTier === 'PREMIUM' ? t.navPro : t.navPlans}</span>
           </Link>
 
-          {/* Quick Notification Test Button */}
           <button
-            onClick={handleTestNotification}
-            title="Probar notificación en este dispositivo"
-            className="flex items-center space-x-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-emerald-500/50 px-2.5 sm:px-3 py-1.5 rounded-lg transition-all"
+            type="button"
+            onClick={() => void handleTestNotification()}
+            title={t.navTestAlert}
+            aria-label={t.navTestAlert}
+            className="hidden sm:flex items-center space-x-1.5 text-xs font-semibold bg-white/[0.04] hover:bg-white/[0.09] text-zinc-200 border border-white/10 px-2.5 py-1.5 rounded-lg transition-colors"
           >
-            <Bell className="w-4 h-4 text-emerald-400" />
-            <span className="hidden sm:inline">Probar Alerta</span>
+            <Bell className="w-3.5 h-3.5 text-[#c8f135]" aria-hidden="true" />
+            <span className="hidden lg:inline">{t.navTestAlert}</span>
           </button>
 
           {user ? (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1.5">
               <button
+                type="button"
                 onClick={onOpenSettings}
-                className="flex items-center space-x-2 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                aria-label="Personalizar rutina y preferencias"
+                className="flex items-center space-x-2 bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
               >
-                <User className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="max-w-[110px] truncate">{user.name}</span>
+                <User className="w-3.5 h-3.5 text-[#c8f135]" aria-hidden="true" />
+                <span className="max-w-[96px] truncate">{user.name}</span>
               </button>
 
-              <button
-                onClick={onLogout}
-                title="Cerrar sesión"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+              <Link
+                to="/account"
+                title={t.footerAccount}
+                aria-label={t.navAccountAria}
+                className="p-2 rounded-lg text-zinc-300 hover:text-[#c8f135] bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 transition-colors"
               >
-                <LogOut className="w-4 h-4" />
+                <ShieldCheck className="w-4 h-4" aria-hidden="true" />
+              </Link>
+
+              <button
+                type="button"
+                onClick={onLogout}
+                title={t.navSignOut}
+                aria-label={t.navSignOut}
+                className="p-2 rounded-lg text-zinc-400 hover:text-rose-300 hover:bg-rose-500/15 border border-transparent hover:border-rose-500/30 transition-colors"
+              >
+                <LogOut className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
           ) : (
             <button
+              type="button"
               onClick={onOpenAuth}
-              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-1.5 rounded-lg text-xs transition-all shadow-md shadow-emerald-500/20"
+              className="bg-[#c8f135] hover:bg-[#d9fc5a] text-[#05070a] font-black px-3.5 py-1.5 rounded-lg text-xs tracking-tight transition-colors"
             >
-              Iniciar Sesión
+              {t.navSignIn}
             </button>
           )}
-        </div>
+        </nav>
       </div>
 
       {notificationStatus && (
-        <div className="bg-emerald-500 text-slate-950 text-xs font-semibold text-center py-1">
+        <div
+          role="status"
+          aria-live="polite"
+          className="bg-[#c8f135] text-[#05070a] text-xs font-bold text-center py-1.5 px-4"
+        >
           {notificationStatus}
         </div>
       )}

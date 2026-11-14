@@ -1,15 +1,25 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
-import { Route, Routes, useNavigate } from 'react-router-dom';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, Route, Routes, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, WifiOff } from 'lucide-react';
-import type { DailyRoutine, UserProfile } from './types';
+import { CloudOff, Download, WifiOff } from 'lucide-react';
+import type { DailyRoutine, Exercise, UserProfile, WeeklyPlanResponse } from './types';
 import { useAuth } from './context/useAuth';
+import { useI18n } from './i18n/useI18n';
 import { exerciseApi, routineApi, userApi, workoutApi } from './services/api';
 import {
   DEFAULT_PROFILE,
   loadGuestOnboardingDraft,
   saveGuestOnboardingDraft,
 } from './services/storage';
+import {
+  enqueuePendingWorkout,
+  flushPendingWorkouts,
+  getPendingWorkouts,
+  isLikelyNetworkOfflineError,
+  loadOfflineSnapshot,
+  saveOfflineSnapshot,
+  type PendingWorkoutRecord,
+} from './services/offlineSync';
 import { getExistingPushSubscription, reminderWatcher } from './utils/notifications';
 import { getCurrentDayOfWeek } from './utils/routineGenerator';
 import { Navbar } from './components/Navbar';
@@ -37,6 +47,15 @@ const PlansPage = lazy(() =>
 );
 const SandboxCheckoutPage = lazy(() =>
   import('./pages/SandboxCheckoutPage').then((m) => ({ default: m.SandboxCheckoutPage }))
+);
+const AccountPage = lazy(() =>
+  import('./pages/AccountPage').then((m) => ({ default: m.AccountPage }))
+);
+const PrivacyPage = lazy(() =>
+  import('./pages/LegalPages').then((m) => ({ default: m.PrivacyPage }))
+);
+const TermsPage = lazy(() =>
+  import('./pages/LegalPages').then((m) => ({ default: m.TermsPage }))
 );
 
 interface BeforeInstallPromptEvent extends Event {
@@ -75,6 +94,7 @@ function HomeWorkspace({
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const { user, isAuthenticated, isRestoring, updateCachedUser, logout } = useAuth();
 
   const [guestProfile, setGuestProfile] = useState<UserProfile>(() => {
@@ -90,11 +110,70 @@ function HomeWorkspace({
     () => typeof navigator !== 'undefined' && !navigator.onLine
   );
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [cachedExercises, setCachedExercises] = useState<Exercise[]>([]);
+  const [cachedWeeklyPlan, setCachedWeeklyPlan] = useState<WeeklyPlanResponse | null>(null);
+  const [pendingWorkouts, setPendingWorkouts] = useState<PendingWorkoutRecord[]>([]);
+  const [isSyncingQueue, setIsSyncingQueue] = useState(false);
 
   const effectiveProfile = useMemo(() => user || guestProfile, [user, guestProfile]);
 
+  const planSnapshotKey = isAuthenticated && user?.id ? `weekly_plan_${user.id}` : 'weekly_plan_guest';
+
+  const syncOfflineQueue = useCallback(async () => {
+    if (!isAuthenticated || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+      return;
+    }
+    const existing = await getPendingWorkouts();
+    if (existing.length === 0) return;
+
+    setIsSyncingQueue(true);
+    try {
+      const syncedCount = await flushPendingWorkouts(async (item) => {
+        const res = await workoutApi.complete({
+          routineTitle: item.routineTitle,
+          durationSeconds: item.durationSeconds,
+          exercisesCompleted: item.exercisesCompleted,
+          feedback: item.feedback,
+        });
+        updateCachedUser(res.user);
+      });
+      if (syncedCount > 0) {
+        await queryClient.invalidateQueries({ queryKey: ['workouts'] });
+        await queryClient.invalidateQueries({ queryKey: ['weeklyPlan'] });
+        await queryClient.invalidateQueries({ queryKey: ['workoutAnalytics'] });
+      }
+      setPendingWorkouts(await getPendingWorkouts());
+    } finally {
+      setIsSyncingQueue(false);
+    }
+  }, [isAuthenticated, queryClient, updateCachedUser]);
+
   useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
+    let active = true;
+    void loadOfflineSnapshot<Exercise[]>('exercises_catalog').then((data) => {
+      if (active && data) setCachedExercises(data);
+    });
+    void loadOfflineSnapshot<WeeklyPlanResponse>(planSnapshotKey).then((data) => {
+      if (active && data) setCachedWeeklyPlan(data);
+    });
+    void getPendingWorkouts().then((items) => {
+      if (active) {
+        setPendingWorkouts(items);
+        if (items.length > 0 && isAuthenticated && !isOffline) {
+          void syncOfflineQueue();
+        }
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [planSnapshotKey, isAuthenticated, isOffline, syncOfflineQueue]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      void syncOfflineQueue();
+    };
     const handleOffline = () => setIsOffline(true);
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
@@ -112,7 +191,7 @@ function HomeWorkspace({
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
-  }, []);
+  }, [syncOfflineQueue]);
 
   useEffect(() => {
     let cancelled = false;
@@ -139,7 +218,12 @@ function HomeWorkspace({
 
   const exercisesQuery = useQuery({
     queryKey: ['exercises'],
-    queryFn: () => exerciseApi.list(),
+    queryFn: async () => {
+      const data = await exerciseApi.list();
+      setCachedExercises(data);
+      void saveOfflineSnapshot('exercises_catalog', data);
+      return data;
+    },
     staleTime: 5 * 60 * 1000,
   });
 
@@ -165,17 +249,21 @@ function HomeWorkspace({
           guestProfile.scheduledDays,
           guestProfile.timezone,
         ],
-    queryFn: () =>
-      isAuthenticated
-        ? routineApi.getWeekly()
-        : routineApi.preview({
+    queryFn: async () => {
+      const data = isAuthenticated
+        ? await routineApi.getWeekly()
+        : await routineApi.preview({
             level: guestProfile.level,
             goal: guestProfile.goal,
             durationMinutes: guestProfile.duration,
             scheduledDays: guestProfile.scheduledDays,
             timezone: guestProfile.timezone,
             adaptationScore: 0,
-          }),
+          });
+      setCachedWeeklyPlan(data);
+      void saveOfflineSnapshot(planSnapshotKey, data);
+      return data;
+    },
     enabled: !isRestoring,
   });
 
@@ -237,8 +325,24 @@ function HomeWorkspace({
 
   const handleFinishWorkout = async (payload: CompletedWorkoutPayload) => {
     if (isAuthenticated) {
-      await completeWorkoutMutation.mutateAsync(payload);
-      return;
+      if (isOffline) {
+        await enqueuePendingWorkout(payload);
+        setPendingWorkouts(await getPendingWorkouts());
+        setActiveWorkoutRoutine(null);
+        return;
+      }
+      try {
+        await completeWorkoutMutation.mutateAsync(payload);
+        return;
+      } catch (err) {
+        if (isLikelyNetworkOfflineError(err)) {
+          await enqueuePendingWorkout(payload);
+          setPendingWorkouts(await getPendingWorkouts());
+          setActiveWorkoutRoutine(null);
+          return;
+        }
+        throw err;
+      }
     }
 
     // Guardar sesión de vista previa en localStorage para importarla automáticamente al crear cuenta/iniciar sesión
@@ -272,12 +376,21 @@ function HomeWorkspace({
     }
   };
 
+  const resolvedWeeklyPlan = weeklyPlanQuery.data || cachedWeeklyPlan;
+  const resolvedExercises = exercisesQuery.data || cachedExercises;
   const todayRoutine =
-    weeklyPlanQuery.data?.today || buildFallbackTodayRoutine(effectiveProfile);
-  const weeklyPlan = weeklyPlanQuery.data?.days || [];
+    resolvedWeeklyPlan?.today || buildFallbackTodayRoutine(effectiveProfile);
+  const weeklyPlan = resolvedWeeklyPlan?.days || [];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#07090d] ch-backdrop-grid text-zinc-100 flex flex-col font-sans">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:rounded-lg focus:bg-[#c8f135] focus:text-[#05070a] focus:font-black focus:text-xs"
+      >
+        {t.skipToContent}
+      </a>
+
       {activeWorkoutRoutine ? (
         <Suspense fallback={<SuspenseFallback />}>
           <WorkoutPlayer
@@ -297,43 +410,57 @@ function HomeWorkspace({
             onLogout={handleLogout}
           />
 
-          <main className="flex-1">
+          <main id="main-content" tabIndex={-1} className="flex-1">
             {isOffline && (
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-                <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 px-4 py-2.5 flex items-center space-x-2 text-xs text-amber-200">
-                  <WifiOff className="w-4 h-4 shrink-0 text-amber-400" />
-                  <span>
-                    Modo sin conexión: puedes consultar el catálogo cacheado; al recuperar conexión sincronizaremos tus cambios.
-                  </span>
+                <div role="status" className="rounded-xl bg-amber-400/10 border border-amber-400/35 px-4 py-2.5 flex items-center space-x-2 text-xs text-amber-200">
+                  <WifiOff className="w-4 h-4 shrink-0 text-amber-300" aria-hidden="true" />
+                  <span>{t.offlineBanner}</span>
+                </div>
+              </div>
+            )}
+
+            {(pendingWorkouts.length > 0 || isSyncingQueue) && (
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3">
+                <div role="status" className="rounded-xl bg-[#c8f135]/10 border border-[#c8f135]/35 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-[#d9fc5a]">
+                  <div className="flex items-center space-x-2">
+                    <CloudOff className="w-4 h-4 shrink-0" aria-hidden="true" />
+                    <span>
+                      {isSyncingQueue
+                        ? t.offlineSyncingNow
+                        : `${pendingWorkouts.length} ${t.offlinePendingQueue}`}
+                    </span>
+                  </div>
                 </div>
               </div>
             )}
 
             {installPrompt && !isOffline && (
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
-                <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/30 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-emerald-200">
-                  <span>Instala CalisHome en tu dispositivo para acceso instantáneo y mejor entrega de recordatorios.</span>
+                <div className="rounded-xl bg-[#c8f135]/10 border border-[#c8f135]/30 px-4 py-2.5 flex items-center justify-between gap-3 text-xs text-zinc-200">
+                  <span>{t.installPromptText}</span>
                   <button
                     type="button"
                     onClick={() => void handleInstallPwa()}
-                    className="shrink-0 inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold"
+                    className="shrink-0 inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#c8f135] hover:bg-[#d9fc5a] text-[#05070a] font-black"
                   >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Instalar App</span>
+                    <Download className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>{t.installBtn}</span>
                   </button>
                 </div>
               </div>
             )}
 
-            {weeklyPlanQuery.isError && (
+            {weeklyPlanQuery.isError && !resolvedWeeklyPlan && (
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-                <div className="rounded-2xl bg-rose-500/10 border border-rose-500/30 p-4 flex items-center justify-between text-xs text-rose-300">
-                  <span>No pudimos conectar con el servidor de CalisHome para generar tu plan.</span>
+                <div role="alert" className="rounded-xl bg-rose-500/10 border border-rose-500/35 p-4 flex items-center justify-between text-xs text-rose-300">
+                  <span>{t.serverError}</span>
                   <button
+                    type="button"
                     onClick={() => void weeklyPlanQuery.refetch()}
                     className="px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 font-bold text-white"
                   >
-                    Reintentar
+                    {t.retryBtn}
                   </button>
                 </div>
               </div>
@@ -344,9 +471,10 @@ function HomeWorkspace({
               isAuthenticated={isAuthenticated}
               todayRoutine={todayRoutine}
               weeklyPlan={weeklyPlan}
-              exercises={exercisesQuery.data || []}
-              isExercisesLoading={exercisesQuery.isLoading}
+              exercises={resolvedExercises}
+              isExercisesLoading={exercisesQuery.isLoading && resolvedExercises.length === 0}
               workoutLogs={workoutsQuery.data || []}
+              pendingWorkouts={pendingWorkouts}
               onStartWorkout={(routine) => setActiveWorkoutRoutine(routine)}
               onOpenSettings={() => setIsOnboardingOpen(true)}
               onOpenAuth={(mode) => handleOpenAuth(mode || 'login')}
@@ -354,10 +482,24 @@ function HomeWorkspace({
             />
           </main>
 
-          <footer className="border-t border-slate-900 py-6 text-center text-xs text-slate-500 bg-slate-950">
-            <p>
-              <strong>CalisHome</strong> — Diseñado para entrenar en casa con cero equipamiento y constancia garantizada.
-            </p>
+          <footer className="border-t border-white/10 py-6 text-xs text-zinc-400 bg-[#07090d]">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <p>{t.footerTagline}</p>
+              <nav aria-label="Enlaces legales y de cuenta" className="flex flex-wrap items-center justify-center gap-4">
+                <Link to="/plans" className="hover:text-white transition-colors">
+                  {t.navPlans}
+                </Link>
+                <Link to="/account" className="hover:text-white transition-colors">
+                  {t.footerAccount}
+                </Link>
+                <Link to="/privacy" className="hover:text-white transition-colors">
+                  {t.footerPrivacy}
+                </Link>
+                <Link to="/terms" className="hover:text-white transition-colors">
+                  {t.footerTerms}
+                </Link>
+              </nav>
+            </div>
           </footer>
         </>
       )}
@@ -404,6 +546,9 @@ export function App() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/plans" element={<PlansPage />} />
         <Route path="/billing/sandbox-checkout" element={<SandboxCheckoutPage />} />
+        <Route path="/account" element={<AccountPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
         <Route path="*" element={<HomeWorkspace key="fallback" />} />
       </Routes>
     </Suspense>

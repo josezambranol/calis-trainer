@@ -176,6 +176,25 @@ export const authApi = {
   },
 };
 
+export interface AccountDataExportDto {
+  exportedAt: string;
+  privacyFramework: string;
+  user: BackendUserDto;
+  workoutLogs: BackendWorkoutLogDto[];
+  subscriptions: {
+    provider: string;
+    planCode: string;
+    status: string;
+    amountCents: number;
+    currency: string;
+    currentPeriodStart: string | null;
+    currentPeriodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
+    createdAt: string;
+  }[];
+  activePushDevicesCount: number;
+}
+
 export const userApi = {
   async getMe(): Promise<UserProfile> {
     const dto = await apiRequest<BackendUserDto>('/api/v1/users/me');
@@ -233,6 +252,17 @@ export const userApi = {
       user: mapBackendUser(res.user),
       importedLogsCount: res.importedLogsCount,
     };
+  },
+
+  exportMyData(): Promise<AccountDataExportDto> {
+    return apiRequest<AccountDataExportDto>('/api/v1/users/me/export');
+  },
+
+  async deleteMyAccount(): Promise<void> {
+    await apiRequest<void>('/api/v1/users/me', {
+      method: 'DELETE',
+    });
+    setAccessToken(null);
   },
 };
 

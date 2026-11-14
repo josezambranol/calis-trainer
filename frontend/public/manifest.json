@@ -1,13 +1,13 @@
 {
   "id": "/",
-  "name": "CalisHome - Rutinas Sin Material",
+  "name": "CalisHome — Calistenia Adaptativa",
   "short_name": "CalisHome",
-  "description": "Entrena en casa con cero material, rutinas adaptativas y recordatorios automáticos.",
+  "description": "Entrena en casa sin equipamiento con rutinas adaptativas, cola offline y recordatorios Web Push.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#020617",
-  "theme_color": "#10b981",
+  "background_color": "#07090d",
+  "theme_color": "#c8f135",
   "orientation": "portrait-primary",
   "icons": [
     {

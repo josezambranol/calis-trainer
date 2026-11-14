@@ -33,6 +33,8 @@ app:
   billing:
     events-secret: test-wompi-events-secret-2026
     sandbox-enabled: true
+  demo:
+    seed-enabled: false
 
 logging:
   level:

@@ -14,27 +14,28 @@ import {
 import { useAuth } from '../context/useAuth';
 import { billingApi, userApi } from '../services/api';
 import { Navbar } from '../components/Navbar';
+import { useI18n } from '../i18n/useI18n';
 
 const STATUS_LABELS: Record<string, { label: string; style: string }> = {
   ACTIVE: {
     label: 'Activa',
-    style: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+    style: 'bg-[#c8f135]/15 text-[#c8f135] border-[#c8f135]/40',
   },
   IN_GRACE: {
     label: 'En período de gracia',
-    style: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
+    style: 'bg-amber-400/15 text-amber-300 border-amber-400/35',
   },
   PAST_DUE: {
     label: 'Pago vencido',
-    style: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
+    style: 'bg-rose-500/15 text-rose-300 border-rose-500/35',
   },
   CANCELED: {
     label: 'Cancelada',
-    style: 'bg-slate-800 text-slate-300 border-slate-700',
+    style: 'bg-white/[0.06] text-zinc-300 border-white/15',
   },
   PENDING: {
     label: 'Pendiente de confirmación',
-    style: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+    style: 'bg-sky-500/15 text-sky-300 border-sky-500/35',
   },
 };
 
@@ -42,6 +43,7 @@ export const PlansPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   const { user, isAuthenticated, updateCachedUser, logout } = useAuth();
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
@@ -120,7 +122,14 @@ export const PlansPage: React.FC = () => {
     activeSub && (activeSub.status === 'ACTIVE' || activeSub.status === 'IN_GRACE');
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col">
+    <div className="min-h-screen bg-[#07090d] ch-backdrop-grid text-zinc-100 flex flex-col">
+      <a
+        href="#plans-main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:rounded-lg focus:bg-[#c8f135] focus:text-[#05070a] focus:font-black focus:text-xs"
+      >
+        {t.skipToContent}
+      </a>
+
       <Navbar
         user={user}
         onOpenAuth={() => navigate('/login')}
@@ -128,39 +137,39 @@ export const PlansPage: React.FC = () => {
         onLogout={() => void logout()}
       />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        <div className="flex items-center justify-between gap-4">
+      <main id="plans-main" tabIndex={-1} className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <Link
             to="/"
-            className="inline-flex items-center space-x-2 text-xs font-semibold text-slate-300 hover:text-emerald-400 transition-colors"
+            className="inline-flex items-center space-x-2 text-xs font-bold text-zinc-300 hover:text-[#c8f135] transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4" aria-hidden="true" />
             <span>Volver al Dashboard</span>
           </Link>
 
           {plansQuery.data?.sandboxMode && (
-            <span className="inline-flex items-center space-x-1.5 text-[11px] font-bold px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300">
-              <Sparkles className="w-3.5 h-3.5" />
+            <span className="inline-flex items-center space-x-1.5 text-[11px] font-bold px-3 py-1 rounded-lg bg-amber-400/10 border border-amber-400/30 text-amber-300">
+              <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
               <span>Modo Demo Sandbox ($0 — sin cobro real)</span>
             </span>
           )}
         </div>
 
         <section className="text-center max-w-2xl mx-auto space-y-3">
-          <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
-            <Crown className="w-3.5 h-3.5" />
+          <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-[#c8f135]/10 border border-[#c8f135]/30 text-[#c8f135] text-xs font-black uppercase tracking-wider">
+            <Crown className="w-3.5 h-3.5" aria-hidden="true" />
             <span>CalisHome Freemium & Pro</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white">
-            Entrena gratis para siempre. Acelera con <span className="text-emerald-400">Pro</span>.
+          <h1 className="text-3xl sm:text-5xl font-black tracking-[-0.03em] text-white">
+            Entrena gratis. Escala con <span className="text-[#c8f135]">Pro</span>.
           </h1>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-zinc-400">
             Checkout hospedado compatible con Wompi Colombia sin almacenar datos de tarjeta en nuestros servidores.
           </p>
         </section>
 
         {refFromUrl && (
-          <div className="rounded-2xl bg-sky-500/10 border border-sky-500/30 p-4 text-xs text-sky-200 flex items-center justify-between gap-3">
+          <div className="rounded-xl bg-sky-500/10 border border-sky-500/30 p-4 text-xs text-sky-200 flex items-center justify-between gap-3">
             <span>
               Referencia de operación recibida: <strong className="font-mono">{refFromUrl}</strong>.
             </span>
@@ -175,44 +184,44 @@ export const PlansPage: React.FC = () => {
         )}
 
         {errorMsg && (
-          <div className="rounded-2xl bg-rose-500/10 border border-rose-500/30 p-4 text-xs text-rose-300 flex items-center space-x-2">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
+          <div role="alert" className="rounded-xl bg-rose-500/10 border border-rose-500/30 p-4 text-xs text-rose-300 flex items-center space-x-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         {infoMsg && (
-          <div className="rounded-2xl bg-emerald-500/10 border border-emerald-500/30 p-4 text-xs text-emerald-300">
+          <div role="status" className="rounded-xl bg-[#c8f135]/10 border border-[#c8f135]/35 p-4 text-xs text-[#d9fc5a]">
             {infoMsg}
           </div>
         )}
 
         {isAuthenticated && overview && (
-          <section className="rounded-3xl bg-slate-900 border border-slate-800 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <section className="ch-panel rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs uppercase font-bold tracking-wider text-slate-400">
+                <span className="text-xs uppercase font-bold tracking-wider text-zinc-400">
                   Tu Plan Actual:
                 </span>
                 <span
-                  className={`px-2.5 py-0.5 rounded-full text-xs font-black ${
+                  className={`px-2.5 py-0.5 rounded-md text-xs font-black ${
                     effectiveTier === 'PREMIUM'
-                      ? 'bg-emerald-500 text-slate-950'
-                      : 'bg-slate-800 text-slate-200 border border-slate-700'
+                      ? 'bg-[#c8f135] text-[#05070a]'
+                      : 'bg-white/[0.06] text-zinc-200 border border-white/15'
                   }`}
                 >
                   {effectiveTier === 'PREMIUM' ? 'CALISHOME PRO' : 'PLAN GRATIS'}
                 </span>
                 {statusMeta && (
                   <span
-                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${statusMeta.style}`}
+                    className={`px-2.5 py-0.5 rounded-md text-[11px] font-bold border ${statusMeta.style}`}
                   >
                     {statusMeta.label}
                   </span>
                 )}
               </div>
 
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-zinc-400 ch-tabular">
                 Historial visible: <strong className="text-white">{overview.maxWorkoutHistoryVisible} sesiones</strong>
                 {' · '}
                 Dispositivos Push: <strong className="text-white">{overview.maxPushDevices}</strong>
@@ -222,7 +231,7 @@ export const PlansPage: React.FC = () => {
               </p>
 
               {activeSub?.currentPeriodEnd && (
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[11px] text-zinc-500">
                   Referencia <span className="font-mono">{activeSub.externalReference}</span>
                   {' · '}
                   Vigente hasta{' '}
@@ -241,12 +250,12 @@ export const PlansPage: React.FC = () => {
                 type="button"
                 disabled={cancelMutation.isPending}
                 onClick={() => cancelMutation.mutate()}
-                className="inline-flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-bold transition-colors disabled:opacity-50"
+                className="inline-flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/35 text-rose-300 text-xs font-bold transition-colors disabled:opacity-50"
               >
                 {cancelMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                 ) : (
-                  <XCircle className="w-4 h-4" />
+                  <XCircle className="w-4 h-4" aria-hidden="true" />
                 )}
                 <span>Cancelar suscripción</span>
               </button>
@@ -255,8 +264,8 @@ export const PlansPage: React.FC = () => {
         )}
 
         {plansQuery.isLoading ? (
-          <div className="py-12 flex justify-center text-slate-400 text-xs">
-            <Loader2 className="w-5 h-5 animate-spin mr-2 text-emerald-400" />
+          <div className="py-12 flex justify-center text-zinc-400 text-xs">
+            <Loader2 className="w-5 h-5 animate-spin mr-2 text-[#c8f135]" aria-hidden="true" />
             <span>Cargando planes disponibles...</span>
           </div>
         ) : (
@@ -269,33 +278,33 @@ export const PlansPage: React.FC = () => {
               return (
                 <div
                   key={plan.code}
-                  className={`rounded-3xl border p-6 flex flex-col justify-between transition-all ${
+                  className={`rounded-2xl border p-6 flex flex-col justify-between transition-all ${
                     plan.recommended
-                      ? 'bg-gradient-to-b from-slate-900 to-emerald-950/30 border-emerald-500 shadow-xl shadow-emerald-500/10'
-                      : 'bg-slate-900 border-slate-800'
+                      ? 'bg-[#0e1410] border-[#c8f135] shadow-[0_0_32px_rgba(200,241,53,0.12)]'
+                      : 'ch-panel'
                   }`}
                 >
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-3">
-                      <h2 className="text-lg font-extrabold text-white">{plan.name}</h2>
+                      <h2 className="text-lg font-black text-white tracking-tight">{plan.name}</h2>
                       {plan.recommended && (
-                        <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950">
+                        <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-[#c8f135] text-[#05070a]">
                           Recomendado
                         </span>
                       )}
                     </div>
 
-                    <div className="mb-5">
+                    <div className="mb-5 ch-tabular">
                       <p className="text-2xl font-black text-white">{plan.formattedPrice}</p>
-                      <p className="text-[11px] text-slate-400 capitalize">
+                      <p className="text-[11px] text-zinc-400 capitalize">
                         Ciclo: {plan.billingCycle === 'forever' ? 'Sin límite de tiempo' : plan.billingCycle}
                       </p>
                     </div>
 
-                    <ul className="space-y-2.5 text-xs text-slate-300 mb-6">
+                    <ul className="space-y-2.5 text-xs text-zinc-300 mb-6">
                       {plan.features.map((feature, idx) => (
                         <li key={idx} className="flex items-start space-x-2">
-                          <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                          <Check className="w-4 h-4 text-[#c8f135] shrink-0 mt-0.5" aria-hidden="true" />
                           <span>{feature}</span>
                         </li>
                       ))}
@@ -306,12 +315,12 @@ export const PlansPage: React.FC = () => {
                     type="button"
                     disabled={checkoutMutation.isPending || isCurrentPaid}
                     onClick={() => handleSelectPlan(plan.code)}
-                    className={`w-full py-3 px-4 rounded-xl text-xs font-black transition-all ${
+                    className={`w-full py-3 px-4 rounded-xl text-xs font-black transition-colors ${
                       isCurrentPaid || isCurrentFree
-                        ? 'bg-slate-800 text-slate-400 border border-slate-700 cursor-default'
+                        ? 'bg-white/[0.05] text-zinc-400 border border-white/10 cursor-default'
                         : plan.recommended
-                        ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/20'
-                        : 'bg-slate-800 hover:bg-emerald-500 hover:text-slate-950 text-white'
+                        ? 'bg-[#c8f135] hover:bg-[#d9fc5a] text-[#05070a]'
+                        : 'bg-white/[0.08] hover:bg-[#c8f135] hover:text-[#05070a] text-white'
                     }`}
                   >
                     {isCurrentPaid
@@ -330,8 +339,8 @@ export const PlansPage: React.FC = () => {
           </section>
         )}
 
-        <footer className="rounded-2xl bg-slate-900/60 border border-slate-800 p-4 flex items-center justify-center space-x-2 text-xs text-slate-400">
-          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+        <footer className="ch-panel rounded-xl p-4 flex items-center justify-center space-x-2 text-xs text-zinc-400">
+          <ShieldCheck className="w-4 h-4 text-[#c8f135] shrink-0" aria-hidden="true" />
           <span>
             Pagos procesados mediante checkout externo con verificación criptográfica SHA-256 e idempotencia ante reintentos.
           </span>

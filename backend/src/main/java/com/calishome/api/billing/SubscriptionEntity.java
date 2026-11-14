@@ -197,4 +197,12 @@ public class SubscriptionEntity {
     public void setLastEventTimestamp(long lastEventTimestamp) {
         this.lastEventTimestamp = lastEventTimestamp;
     }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
 }

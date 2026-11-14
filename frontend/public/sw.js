@@ -1,5 +1,5 @@
 // Service Worker para CalisHome (PWA, Offline App-Shell y Web Push VAPID)
-const CACHE_NAME = 'calishome-shell-v2';
+const CACHE_NAME = 'calishome-shell-v3';
 const PRECACHE_URLS = [
   '/',
   '/index.html',

@@ -199,68 +199,85 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
+  // Escape key accessibility for Player
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onExit();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onExit]);
+
   // --- FINISHED VIEW ---
   if (phase === 'finished') {
     return (
-      <div className="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4">
-        <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 text-center shadow-2xl relative overflow-hidden">
-          <div className="w-20 h-20 mx-auto rounded-3xl bg-gradient-to-tr from-amber-400 to-orange-500 flex items-center justify-center text-slate-950 mb-4 shadow-xl shadow-orange-500/20 animate-bounce">
-            <Award className="w-10 h-10 stroke-[2.5]" />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Entrenamiento completado"
+        className="fixed inset-0 z-50 bg-[#07090d] ch-backdrop-grid flex items-center justify-center p-4"
+      >
+        <div className="w-full max-w-lg ch-panel rounded-2xl p-6 sm:p-8 text-center shadow-2xl relative overflow-hidden">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-[#c8f135] flex items-center justify-center text-[#05070a] mb-4 shadow-[0_0_28px_rgba(200,241,53,0.25)]">
+            <Award className="w-9 h-9 stroke-[2.5]" aria-hidden="true" />
           </div>
 
-          <h2 className="text-3xl font-black text-white">¡Misión Cumplida!</h2>
-          <p className="text-sm text-slate-400 mt-1">Has superado la rutina con tu propio cuerpo</p>
+          <h2 className="text-3xl font-black text-white tracking-[-0.03em]">¡Misión Cumplida!</h2>
+          <p className="text-sm text-zinc-400 mt-1">Has completado tu bloque de calistenia sin material</p>
 
-          {/* Stats Bar */}
-          <div className="grid grid-cols-2 gap-3 my-6">
-            <div className="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-4">
-              <span className="text-xs text-slate-400 block mb-1">Tiempo Entrenado</span>
-              <span className="text-2xl font-black text-emerald-400">{formatTime(elapsedTotalSeconds)}</span>
+          <div className="grid grid-cols-2 gap-3 my-6 ch-tabular">
+            <div className="ch-panel-elevated rounded-xl p-4">
+              <span className="text-xs text-zinc-400 block mb-1">Tiempo Entrenado</span>
+              <span className="text-2xl font-black text-[#c8f135] font-mono">{formatTime(elapsedTotalSeconds)}</span>
             </div>
-            <div className="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-4">
-              <span className="text-xs text-slate-400 block mb-1">Ejercicios Realizados</span>
-              <span className="text-2xl font-black text-white">{routine.exercises.length}</span>
+            <div className="ch-panel-elevated rounded-xl p-4">
+              <span className="text-xs text-zinc-400 block mb-1">Ejercicios Realizados</span>
+              <span className="text-2xl font-black text-white font-mono">{routine.exercises.length}</span>
             </div>
           </div>
 
-          {/* Adaptation Survey */}
-          <div className="bg-slate-800/50 border border-slate-700/80 rounded-2xl p-4 text-left mb-6">
-            <h4 className="font-bold text-white text-sm mb-1">¿Cómo sentiste la intensidad hoy?</h4>
-            <p className="text-xs text-slate-400 mb-3">
-              Usaremos tu respuesta para ajustar automáticamente las series y repeticiones de tu próxima sesión.
+          <div className="ch-panel-elevated rounded-xl p-4 text-left mb-6">
+            <h3 className="font-bold text-white text-sm mb-1">¿Cómo sentiste la intensidad hoy?</h3>
+            <p className="text-xs text-zinc-400 mb-3">
+              Usaremos tu respuesta para calibrar series, repeticiones y variantes de tu próxima sesión.
             </p>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Intensidad de la sesión">
               {[
-                { id: 'too_easy' as const, label: 'Muy Fácil', icon: '🟢', sub: 'Subir nivel' },
-                { id: 'just_right' as const, label: 'Perfecto', icon: '⚡', sub: 'Progresión ideal' },
-                { id: 'too_hard' as const, label: 'Agotador', icon: '🔴', sub: 'Bajar carga' },
+                { id: 'too_easy' as const, label: 'Muy Fácil', icon: '●', sub: 'Subir carga' },
+                { id: 'just_right' as const, label: 'Perfecto', icon: '◆', sub: 'Progresión ideal' },
+                { id: 'too_hard' as const, label: 'Agotador', icon: '▲', sub: 'Bajar carga' },
               ].map((fb) => (
                 <button
                   key={fb.id}
                   type="button"
+                  role="radio"
+                  aria-checked={selectedFeedback === fb.id}
                   onClick={() => setSelectedFeedback(fb.id)}
                   className={`p-3 rounded-xl border text-center transition-all ${
                     selectedFeedback === fb.id
-                      ? 'bg-emerald-500/20 border-emerald-500 shadow-md'
-                      : 'bg-slate-800 border-slate-700 hover:border-slate-600'
+                      ? 'bg-[#c8f135]/15 border-[#c8f135] text-white'
+                      : 'bg-[#090c11] border-white/10 text-zinc-300 hover:border-white/25'
                   }`}
                 >
-                  <span className="text-lg block mb-0.5">{fb.icon}</span>
+                  <span className="text-base block mb-0.5 text-[#c8f135]" aria-hidden="true">{fb.icon}</span>
                   <span className="text-xs font-bold text-white block">{fb.label}</span>
-                  <span className="text-[10px] text-slate-400 block">{fb.sub}</span>
+                  <span className="text-[10px] text-zinc-400 block">{fb.sub}</span>
                 </button>
               ))}
             </div>
           </div>
 
           <button
+            type="button"
             onClick={handleFinalSave}
             disabled={isSaving}
-            className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black py-3.5 px-6 rounded-2xl text-base transition-all shadow-xl shadow-emerald-500/25 disabled:opacity-60"
+            className="w-full flex items-center justify-center space-x-2 bg-[#c8f135] hover:bg-[#d9fc5a] text-[#05070a] font-black py-3.5 px-6 rounded-xl text-base transition-colors disabled:opacity-60"
           >
-            <span>{isSaving ? 'Guardando progreso...' : 'Guardar y Ver Mi Dashboard'}</span>
-            <ArrowRight className="w-5 h-5" />
+            <span>{isSaving ? 'Guardando progreso...' : 'Guardar y Volver al Panel'}</span>
+            <ArrowRight className="w-5 h-5" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -269,61 +286,69 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
 
   // --- WORKOUT IN PROGRESS VIEW ---
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col justify-between p-4 sm:p-6 overflow-hidden select-none">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Reproductor de entrenamiento: ${routine.title}`}
+      className="fixed inset-0 z-50 bg-[#07090d] ch-backdrop-grid flex flex-col justify-between p-4 sm:p-6 overflow-hidden select-none"
+    >
       {/* Top Header */}
       <div className="max-w-3xl w-full mx-auto flex items-center justify-between">
         <button
+          type="button"
           onClick={onExit}
-          className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-          title="Salir del entrenamiento"
+          aria-label="Salir del entrenamiento"
+          className="p-2.5 rounded-xl bg-white/[0.05] border border-white/10 text-zinc-300 hover:text-white hover:bg-white/[0.1] transition-colors"
         >
-          <X className="w-5 h-5" />
+          <X className="w-5 h-5" aria-hidden="true" />
         </button>
 
-        {/* Exercise Progress Indicator */}
-        <div className="flex flex-col items-center">
-          <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">
+        <div className="flex flex-col items-center ch-tabular">
+          <span className="text-xs font-black text-[#c8f135] uppercase tracking-[0.15em]">
             Ejercicio {exerciseIndex + 1} de {routine.exercises.length}
           </span>
-          <span className="text-xs text-slate-400 font-mono mt-0.5">
+          <span className="text-xs text-zinc-400 font-mono mt-0.5">
             Tiempo: {formatTime(elapsedTotalSeconds)}
           </span>
         </div>
 
-        {/* Audio Controls */}
         <div className="flex items-center space-x-2">
           <button
+            type="button"
+            aria-pressed={soundOn}
+            aria-label="Activar o desactivar efectos de sonido"
             onClick={() => setSoundOn(!soundOn)}
-            className={`p-2 rounded-xl border transition-colors ${
+            className={`p-2.5 rounded-xl border transition-colors ${
               soundOn
-                ? 'bg-slate-900 border-slate-800 text-emerald-400'
-                : 'bg-slate-900 border-slate-800 text-slate-500'
+                ? 'bg-[#c8f135]/15 border-[#c8f135]/40 text-[#c8f135]'
+                : 'bg-white/[0.04] border-white/10 text-zinc-500'
             }`}
-            title="Efectos de sonido"
           >
-            {soundOn ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+            {soundOn ? <Volume2 className="w-5 h-5" aria-hidden="true" /> : <VolumeX className="w-5 h-5" aria-hidden="true" />}
           </button>
 
           <button
+            type="button"
+            aria-pressed={voiceOn}
+            aria-label="Activar o desactivar guía por voz"
             onClick={() => setVoiceOn(!voiceOn)}
-            className={`p-2 rounded-xl border transition-colors ${
+            className={`p-2.5 rounded-xl border transition-colors ${
               voiceOn
-                ? 'bg-slate-900 border-slate-800 text-emerald-400'
-                : 'bg-slate-900 border-slate-800 text-slate-500'
+                ? 'bg-[#c8f135]/15 border-[#c8f135]/40 text-[#c8f135]'
+                : 'bg-white/[0.04] border-white/10 text-zinc-500'
             }`}
-            title="Entrenador por voz en español"
           >
-            {voiceOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+            {voiceOn ? <Mic className="w-5 h-5" aria-hidden="true" /> : <MicOff className="w-5 h-5" aria-hidden="true" />}
           </button>
         </div>
       </div>
 
-      {/* Progress Dots */}
+      {/* Progress Track */}
       <div className="max-w-3xl w-full mx-auto grid grid-cols-5 sm:grid-cols-7 gap-1.5 my-2">
         {routine.exercises.map((item, idx) => {
-          let stateClass = 'bg-slate-800';
-          if (idx < exerciseIndex) stateClass = 'bg-emerald-500';
-          if (idx === exerciseIndex) stateClass = 'bg-emerald-400 ring-2 ring-emerald-500/50 animate-pulse';
+          let stateClass = 'bg-white/10';
+          if (idx < exerciseIndex) stateClass = 'bg-[#c8f135]/60';
+          if (idx === exerciseIndex) stateClass = 'bg-[#c8f135] shadow-[0_0_12px_rgba(200,241,53,0.5)]';
           return (
             <div
               key={item.exercise.id}
@@ -334,51 +359,43 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
       </div>
 
       {/* CENTER STAGE */}
-      <div className="max-w-xl w-full mx-auto my-auto flex flex-col items-center text-center">
-        {/* Phase: READY */}
+      <div aria-live="polite" className="max-w-xl w-full mx-auto my-auto flex flex-col items-center text-center">
         {phase === 'ready' && currentItem && (
-          <div className="space-y-4 animate-scale-up">
-            <span className="inline-block px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-xs uppercase tracking-wider">
-              ¡Prepárate para empezar!
+          <div className="space-y-4">
+            <span className="inline-block px-3 py-1 rounded-md bg-[#c8f135]/15 border border-[#c8f135]/35 text-[#c8f135] font-black text-xs uppercase tracking-wider">
+              Prepárate para iniciar
             </span>
-            <h2 className="text-3xl sm:text-4xl font-black text-white">{currentItem.exercise.name}</h2>
-            <p className="text-slate-400 text-sm max-w-md">{currentItem.exercise.targetMuscle}</p>
+            <h2 className="text-3xl sm:text-5xl font-black text-white tracking-[-0.03em]">{currentItem.exercise.name}</h2>
+            <p className="text-zinc-400 text-sm max-w-md">{currentItem.exercise.targetMuscle}</p>
 
-            <div className="w-32 h-32 rounded-full border-4 border-emerald-500 flex items-center justify-center text-5xl font-black text-white my-4 shadow-xl shadow-emerald-500/20">
+            <div className="w-32 h-32 mx-auto rounded-full border-4 border-[#c8f135] flex items-center justify-center text-5xl font-black text-white my-4 font-mono ch-tabular shadow-[0_0_32px_rgba(200,241,53,0.18)]">
               {secondsRemaining}
             </div>
 
             <button
+              type="button"
               onClick={startWorkPhase}
-              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-sm transition-all"
+              className="bg-[#c8f135] hover:bg-[#d9fc5a] text-[#05070a] font-black px-7 py-3 rounded-xl text-sm transition-colors"
             >
               Comenzar Ahora
             </button>
           </div>
         )}
 
-        {/* Phase: REST */}
         {phase === 'rest' && currentItem && (
-          <div className="space-y-4 w-full animate-fade-in">
-            <span className="inline-block px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 font-bold text-xs uppercase tracking-wider">
-              Recuperación y Descanso
+          <div className="space-y-4 w-full">
+            <span className="inline-block px-3 py-1 rounded-md bg-sky-500/15 border border-sky-400/35 text-sky-300 font-black text-xs uppercase tracking-wider">
+              Recuperación Activa
             </span>
 
-            {/* Big Countdown Circle */}
             <div className="relative w-44 h-44 mx-auto flex items-center justify-center my-4">
-              <svg className="w-full h-full transform -rotate-90">
+              <svg className="w-full h-full transform -rotate-90" aria-hidden="true">
+                <circle cx="88" cy="88" r="78" className="stroke-white/10 fill-none" strokeWidth="8" />
                 <circle
                   cx="88"
                   cy="88"
                   r="78"
-                  className="stroke-slate-800 fill-none"
-                  strokeWidth="8"
-                />
-                <circle
-                  cx="88"
-                  cy="88"
-                  r="78"
-                  className="stroke-blue-400 fill-none transition-all duration-1000 ease-linear"
+                  className="stroke-sky-400 fill-none transition-all duration-1000 ease-linear"
                   strokeWidth="8"
                   strokeDasharray={2 * Math.PI * 78}
                   strokeDashoffset={
@@ -387,94 +404,84 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
                   strokeLinecap="round"
                 />
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <div className="absolute inset-0 flex flex-col items-center justify-center ch-tabular">
                 <span className="text-5xl font-black text-white font-mono">{secondsRemaining}</span>
-                <span className="text-xs uppercase font-bold text-slate-400">segundos</span>
+                <span className="text-xs uppercase font-bold text-zinc-400">segundos</span>
               </div>
             </div>
 
-            {/* Rest Action Buttons */}
             <div className="flex items-center justify-center space-x-3">
               <button
+                type="button"
                 onClick={() => addRestTime(15)}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-4 py-2 rounded-xl text-xs border border-slate-700 transition-colors"
+                className="bg-white/[0.06] hover:bg-white/[0.12] text-zinc-200 font-bold px-4 py-2 rounded-xl text-xs border border-white/15 transition-colors"
               >
                 +15 Segundos
               </button>
               <button
+                type="button"
                 onClick={skipRest}
-                className="bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold px-5 py-2 rounded-xl text-xs transition-colors flex items-center space-x-1"
+                className="bg-sky-400 hover:bg-sky-300 text-[#05070a] font-black px-5 py-2 rounded-xl text-xs transition-colors flex items-center space-x-1"
               >
                 <span>Saltar Descanso</span>
-                <SkipForward className="w-3.5 h-3.5" />
+                <SkipForward className="w-3.5 h-3.5" aria-hidden="true" />
               </button>
             </div>
 
-            {/* Next Up Preview */}
-            <div className="mt-6 bg-slate-900 border border-slate-800 rounded-2xl p-3.5 max-w-md mx-auto text-left flex items-center justify-between">
+            <div className="mt-6 ch-panel rounded-xl p-3.5 max-w-md mx-auto text-left flex items-center justify-between">
               <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400">A Continuación:</span>
-                <h4 className="text-sm font-bold text-white">
+                <span className="text-[10px] uppercase font-bold text-zinc-400">A Continuación:</span>
+                <h3 className="text-sm font-bold text-white">
                   {currentSet === 1 ? currentItem.exercise.name : nextItem?.exercise.name || currentItem.exercise.name}
-                </h4>
-                <p className="text-xs text-slate-400">
-                  {currentSet === 1 ? `Serie ${currentSet} de ${currentItem.sets}` : `Siguiente serie o ejercicio`}
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  {currentSet === 1 ? `Serie ${currentSet} de ${currentItem.sets}` : 'Siguiente serie o movimiento'}
                 </p>
               </div>
-              <div className="p-2 rounded-xl bg-slate-800 text-slate-400">
-                <ChevronRight className="w-4 h-4" />
+              <div className="p-2 rounded-lg bg-white/[0.05] text-zinc-400">
+                <ChevronRight className="w-4 h-4" aria-hidden="true" />
               </div>
             </div>
           </div>
         )}
 
-        {/* Phase: WORK */}
         {phase === 'work' && currentItem && (
           <div className="w-full space-y-4">
-            {/* Badges */}
             <div className="flex items-center justify-center space-x-2">
-              <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-xs uppercase tracking-wider">
+              <span className="px-3 py-1 rounded-md bg-[#c8f135]/15 border border-[#c8f135]/35 text-[#c8f135] font-black text-xs uppercase tracking-wider">
                 Serie {currentSet} de {currentItem.sets}
               </span>
-              <span className="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-slate-300 font-bold text-xs">
+              <span className="px-3 py-1 rounded-md bg-white/[0.05] border border-white/10 text-zinc-300 font-bold text-xs">
                 {currentItem.exercise.equipment}
               </span>
             </div>
 
-            {/* Exercise Title */}
             <div>
-              <h2 className="text-3xl sm:text-4xl font-black text-white">{currentItem.exercise.name}</h2>
-              <p className="text-sm text-emerald-400 font-medium mt-1 flex items-center justify-center space-x-1.5">
-                <Flame className="w-4 h-4" />
+              <h2 className="text-3xl sm:text-4xl font-black text-white tracking-[-0.03em]">{currentItem.exercise.name}</h2>
+              <p className="text-sm text-[#c8f135] font-semibold mt-1 flex items-center justify-center space-x-1.5">
+                <Flame className="w-4 h-4" aria-hidden="true" />
                 <span>{currentItem.exercise.targetMuscle}</span>
               </p>
             </div>
 
-            {/* Main Action Display: Reps or Time */}
             {currentItem.exercise.type === 'reps' ? (
-              <div className="my-6">
-                <div className="text-7xl sm:text-8xl font-black text-white tracking-tight">
+              <div className="my-6 ch-tabular">
+                <div className="text-7xl sm:text-8xl font-black text-white tracking-tight font-mono">
                   {currentItem.repsOrSeconds}
                 </div>
-                <span className="text-sm font-bold uppercase tracking-widest text-slate-400">
+                <span className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-400">
                   Repeticiones Controladas
                 </span>
               </div>
             ) : (
               <div className="relative w-48 h-48 mx-auto flex items-center justify-center my-4">
-                <svg className="w-full h-full transform -rotate-90">
+                <svg className="w-full h-full transform -rotate-90" aria-hidden="true">
+                  <circle cx="96" cy="96" r="84" className="stroke-white/10 fill-none" strokeWidth="10" />
                   <circle
                     cx="96"
                     cy="96"
                     r="84"
-                    className="stroke-slate-800 fill-none"
-                    strokeWidth="10"
-                  />
-                  <circle
-                    cx="96"
-                    cy="96"
-                    r="84"
-                    className="stroke-emerald-400 fill-none transition-all duration-1000 ease-linear"
+                    className="stroke-[#c8f135] fill-none transition-all duration-1000 ease-linear"
                     strokeWidth="10"
                     strokeDasharray={2 * Math.PI * 84}
                     strokeDashoffset={
@@ -483,67 +490,75 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
                     strokeLinecap="round"
                   />
                 </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <div className="absolute inset-0 flex flex-col items-center justify-center ch-tabular">
                   <span className="text-6xl font-black text-white font-mono">{secondsRemaining}</span>
-                  <span className="text-xs uppercase font-bold text-slate-400">segundos</span>
+                  <span className="text-xs uppercase font-bold text-zinc-400">segundos</span>
                 </div>
               </div>
             )}
 
-            {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
               {currentItem.exercise.type === 'reps' ? (
                 <button
+                  type="button"
                   onClick={completeCurrentSet}
-                  className="w-full sm:w-auto min-w-[240px] flex items-center justify-center space-x-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-4 px-8 rounded-2xl text-lg transition-all shadow-xl shadow-emerald-500/25 active:scale-95"
+                  className="w-full sm:w-auto min-w-[240px] flex items-center justify-center space-x-2.5 bg-[#c8f135] hover:bg-[#d9fc5a] text-[#05070a] font-black py-4 px-8 rounded-xl text-base transition-colors active:scale-[0.98]"
                 >
-                  <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
-                  <span>¡Serie Completada!</span>
+                  <CheckCircle2 className="w-5 h-5 stroke-[2.5]" aria-hidden="true" />
+                  <span>Serie Completada</span>
                 </button>
               ) : (
                 <div className="flex items-center space-x-3">
                   <button
+                    type="button"
+                    aria-label={isTimerRunning ? 'Pausar temporizador' : 'Reanudar temporizador'}
                     onClick={() => setIsTimerRunning(!isTimerRunning)}
-                    className="p-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 transition-colors"
+                    className="p-4 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-white border border-white/15 transition-colors"
                   >
-                    {isTimerRunning ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+                    {isTimerRunning ? <Pause className="w-6 h-6" aria-hidden="true" /> : <Play className="w-6 h-6" aria-hidden="true" />}
                   </button>
                   <button
+                    type="button"
                     onClick={completeCurrentSet}
-                    className="flex items-center space-x-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-4 px-6 rounded-2xl text-base transition-all"
+                    className="flex items-center space-x-2 bg-[#c8f135] hover:bg-[#d9fc5a] text-[#05070a] font-black py-4 px-6 rounded-xl text-base transition-colors"
                   >
                     <span>Completar Serie</span>
-                    <SkipForward className="w-5 h-5" />
+                    <SkipForward className="w-5 h-5" aria-hidden="true" />
                   </button>
                 </div>
               )}
 
-              {/* Info / Technique Button */}
               <button
+                type="button"
+                aria-expanded={showInfo}
                 onClick={() => setShowInfo(!showInfo)}
-                className="flex items-center space-x-1.5 text-xs text-slate-400 hover:text-white bg-slate-900 border border-slate-800 px-4 py-3 rounded-2xl transition-colors"
+                className="flex items-center space-x-1.5 text-xs font-bold text-zinc-300 hover:text-white bg-white/[0.05] border border-white/10 px-4 py-3.5 rounded-xl transition-colors"
               >
-                <Info className="w-4 h-4 text-emerald-400" />
+                <Info className="w-4 h-4 text-[#c8f135]" aria-hidden="true" />
                 <span>Ver Técnica</span>
               </button>
             </div>
 
-            {/* Technique Popover */}
             {showInfo && (
-              <div className="bg-slate-900/95 border border-slate-700 rounded-2xl p-4 text-left max-w-md mx-auto mt-4 text-xs space-y-2 animate-fade-in shadow-xl">
+              <div className="ch-panel rounded-xl p-4 text-left max-w-md mx-auto mt-4 text-xs space-y-2 shadow-xl">
                 <div className="flex items-center justify-between font-bold text-white text-sm">
                   <span>Puntos Clave de Técnica</span>
-                  <button onClick={() => setShowInfo(false)} className="text-slate-400 hover:text-white">
-                    <X className="w-4 h-4" />
+                  <button
+                    type="button"
+                    aria-label="Cerrar técnica"
+                    onClick={() => setShowInfo(false)}
+                    className="text-zinc-400 hover:text-white"
+                  >
+                    <X className="w-4 h-4" aria-hidden="true" />
                   </button>
                 </div>
-                <ul className="list-disc list-inside text-slate-300 space-y-1">
+                <ul className="list-disc list-inside text-zinc-300 space-y-1">
                   {currentItem.exercise.instructions.map((step, i) => (
                     <li key={i}>{step}</li>
                   ))}
                 </ul>
-                <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
-                  <span className="font-bold">Tip de Oro: </span>
+                <div className="p-2.5 rounded-lg bg-[#c8f135]/10 border border-[#c8f135]/25 text-[#d9fc5a]">
+                  <span className="font-bold">Tip clave: </span>
                   {currentItem.exercise.tips}
                 </div>
               </div>
@@ -552,9 +567,8 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
         )}
       </div>
 
-      {/* Bottom Footer Note */}
-      <div className="max-w-3xl w-full mx-auto text-center text-xs text-slate-500 py-1">
-        <span>Sin pesas ni máquinas • Respira profundo en cada repetición</span>
+      <div className="max-w-3xl w-full mx-auto text-center text-xs text-zinc-500 py-1">
+        <span>Sin pesas ni máquinas · Respira profundo en cada repetición · Esc para salir</span>
       </div>
     </div>
   );

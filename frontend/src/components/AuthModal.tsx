@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { X, Mail, Lock, User, ArrowRight, ShieldCheck, CheckCircle2, MailCheck } from 'lucide-react';
-import { authApi } from '../services/api';
+import { X, Mail, Lock, User, ArrowRight, ShieldCheck, CheckCircle2, MailCheck, Sparkles } from 'lucide-react';
+import { authApi, billingApi } from '../services/api';
 import { ApiError } from '../services/apiClient';
 import { useAuth } from '../context/useAuth';
 import {
@@ -45,7 +46,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const [resendingVerification, setResendingVerification] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
+
+  const plansQuery = useQuery({
+    queryKey: ['billingPlans'],
+    queryFn: () => billingApi.getPlans(),
+    enabled: isOpen && mode === 'login',
+    staleTime: 60 * 1000,
+    retry: false,
+  });
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
@@ -121,6 +131,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     defaultValues: { email: '' },
   });
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const switchMode = (nextMode: AuthModalMode) => {
@@ -150,6 +169,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       }
     }
   });
+
+  const handleDemoLogin = async () => {
+    setServerError('');
+    setInfoMessage('');
+    setUnverifiedEmail(null);
+    setDemoLoading(true);
+    try {
+      const loggedUser = await authApi.login({
+        email: 'demo@calishome.app',
+        password: 'DemoCalis2026!',
+      });
+      await completeLogin(loggedUser);
+      onAuthenticated();
+      onClose();
+    } catch (err) {
+      setServerError(
+        err instanceof ApiError
+          ? err.detail
+          : 'No pudimos iniciar la cuenta Demo en este entorno.'
+      );
+    } finally {
+      setDemoLoading(false);
+    }
+  };
 
   const handleRegisterSubmit = registerForm.handleSubmit(async (values) => {
     setServerError('');
@@ -210,24 +253,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         : 'Accede a tu plan personalizado con cero material';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 sm:p-8 overflow-hidden max-h-[92vh] overflow-y-auto">
-        <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="auth-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+    >
+      <div className="relative w-full max-w-md bg-[#0d1118] border border-white/10 rounded-2xl shadow-2xl p-6 sm:p-8 overflow-hidden max-h-[92vh] overflow-y-auto">
         <button
+          type="button"
           onClick={onClose}
           aria-label="Cerrar ventana"
-          className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg transition-colors"
+          className="absolute top-4 right-4 text-zinc-400 hover:text-white p-1 rounded-lg transition-colors"
         >
-          <X className="w-5 h-5" />
+          <X className="w-5 h-5" aria-hidden="true" />
         </button>
 
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 mb-3">
-            <ShieldCheck className="w-6 h-6" />
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#c8f135]/10 border border-[#c8f135]/35 text-[#c8f135] mb-3">
+            <ShieldCheck className="w-6 h-6" aria-hidden="true" />
           </div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">{title}</h2>
-          <p className="text-sm text-slate-400 mt-1">{subtitle}</p>
+          <h2 id="auth-modal-title" className="text-2xl font-black text-white tracking-tight">{title}</h2>
+          <p className="text-sm text-zinc-400 mt-1">{subtitle}</p>
         </div>
 
         {infoMessage && (
@@ -323,12 +370,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
             <button
               type="submit"
-              disabled={loginForm.formState.isSubmitting}
-              className="w-full mt-2 flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold py-2.5 px-4 rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+              disabled={loginForm.formState.isSubmitting || demoLoading}
+              className="w-full mt-2 flex items-center justify-center space-x-2 bg-[#c8f135] hover:bg-[#d9fc5a] text-[#05070a] font-black py-2.5 px-4 rounded-xl text-sm transition-colors disabled:opacity-50"
             >
               <span>{loginForm.formState.isSubmitting ? 'Entrando...' : 'Entrar a CalisHome'}</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4" aria-hidden="true" />
             </button>
+
+            {plansQuery.data?.sandboxMode && (
+              <button
+                type="button"
+                disabled={loginForm.formState.isSubmitting || demoLoading}
+                onClick={() => void handleDemoLogin()}
+                className="w-full flex items-center justify-center space-x-2 bg-white/[0.05] hover:bg-white/[0.1] border border-[#c8f135]/35 text-[#c8f135] font-bold py-2.5 px-4 rounded-xl text-xs transition-colors disabled:opacity-50"
+              >
+                <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>{demoLoading ? 'Cargando Atleta Demo...' : 'Entrar como Atleta Demo (Pro)'}</span>
+              </button>
+            )}
           </form>
         )}
 

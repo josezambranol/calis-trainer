@@ -45,6 +45,8 @@ app:
       requests-per-minute: ${GLOBAL_RATE_LIMIT_RPM:120}
   billing:
     sandbox-enabled: false
+  demo:
+    seed-enabled: false
 
 logging:
   level:

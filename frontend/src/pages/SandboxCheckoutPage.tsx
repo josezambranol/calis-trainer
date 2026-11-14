@@ -27,7 +27,7 @@ export const SandboxCheckoutPage: React.FC = () => {
         const freshUser = await userApi.getMe();
         updateCachedUser(freshUser);
       } catch {
-        // El usuario se sincronizará en /plans
+        // Sincronización diferida en /plans
       }
       await queryClient.invalidateQueries({ queryKey: ['billingOverview'] });
       await queryClient.invalidateQueries({ queryKey: ['workouts'] });
@@ -44,46 +44,46 @@ export const SandboxCheckoutPage: React.FC = () => {
   });
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+    <div className="min-h-screen bg-[#07090d] ch-backdrop-grid text-zinc-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md ch-panel rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
         <div className="flex items-center justify-between">
           <Link
             to="/plans"
-            className="inline-flex items-center space-x-1.5 text-xs font-semibold text-slate-400 hover:text-emerald-400"
+            className="inline-flex items-center space-x-1.5 text-xs font-bold text-zinc-400 hover:text-[#c8f135]"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4" aria-hidden="true" />
             <span>Volver a Planes</span>
           </Link>
-          <span className="text-[10px] uppercase font-black px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+          <span className="text-[10px] uppercase font-black px-2.5 py-1 rounded-md bg-amber-400/15 text-amber-300 border border-amber-400/35">
             Sandbox Wompi $0
           </span>
         </div>
 
         <div className="space-y-2">
-          <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
-            <ShieldCheck className="w-6 h-6 text-emerald-400" />
+          <div className="w-11 h-11 rounded-xl bg-[#c8f135]/15 border border-[#c8f135]/35 flex items-center justify-center">
+            <ShieldCheck className="w-6 h-6 text-[#c8f135]" aria-hidden="true" />
           </div>
-          <h1 className="text-xl font-black text-white">Pasarela Simulada CalisHome</h1>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Entorno gratuito de demostración. Cada botón firma un webhook SHA-256 idéntico al de Wompi producción para validar activación Pro, período de gracia y recibo de pago.
+          <h1 className="text-xl font-black text-white tracking-tight">Pasarela Simulada CalisHome</h1>
+          <p className="text-xs text-zinc-400 leading-relaxed">
+            Entorno gratuito de demostración. Cada acción firma un webhook SHA-256 idéntico al de Wompi producción para validar activación Pro, período de gracia y recibo de pago.
           </p>
         </div>
 
-        <div className="rounded-2xl bg-slate-950 border border-slate-800 p-4 text-xs space-y-1.5">
+        <div className="rounded-xl bg-[#090c11] border border-white/10 p-4 text-xs space-y-1.5">
           <div className="flex justify-between">
-            <span className="text-slate-400">Plan:</span>
+            <span className="text-zinc-400">Plan:</span>
             <span className="font-bold text-white">
               {planCode === 'pro_yearly' ? 'CalisHome Pro Anual' : 'CalisHome Pro Mensual'}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-400">Referencia:</span>
-            <span className="font-mono text-emerald-400">{externalReference || 'N/D'}</span>
+            <span className="text-zinc-400">Referencia:</span>
+            <span className="font-mono text-[#c8f135]">{externalReference || 'N/D'}</span>
           </div>
         </div>
 
         {errorMsg && (
-          <div className="rounded-xl bg-rose-500/10 border border-rose-500/30 p-3 text-xs text-rose-300">
+          <div role="alert" className="rounded-xl bg-rose-500/10 border border-rose-500/35 p-3 text-xs text-rose-300">
             {errorMsg}
           </div>
         )}
@@ -93,12 +93,12 @@ export const SandboxCheckoutPage: React.FC = () => {
             type="button"
             disabled={!externalReference || completeMutation.isPending}
             onClick={() => completeMutation.mutate('APPROVED')}
-            className="w-full flex items-center justify-center space-x-2 py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition-all disabled:opacity-50"
+            className="w-full flex items-center justify-center space-x-2 py-3 px-4 rounded-xl bg-[#c8f135] hover:bg-[#d9fc5a] text-[#05070a] font-black text-xs transition-colors disabled:opacity-50"
           >
             {completeMutation.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
             ) : (
-              <CheckCircle2 className="w-4 h-4" />
+              <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
             )}
             <span>Simular Pago Aprobado (Activar Pro)</span>
           </button>
@@ -107,7 +107,7 @@ export const SandboxCheckoutPage: React.FC = () => {
             type="button"
             disabled={!externalReference || completeMutation.isPending}
             onClick={() => completeMutation.mutate('DECLINED')}
-            className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-bold text-xs transition-all disabled:opacity-50"
+            className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/35 text-amber-300 font-bold text-xs transition-colors disabled:opacity-50"
           >
             <span>Simular Pago Rechazado (PAST_DUE / IN_GRACE)</span>
           </button>
@@ -116,9 +116,9 @@ export const SandboxCheckoutPage: React.FC = () => {
             type="button"
             disabled={!externalReference || completeMutation.isPending}
             onClick={() => completeMutation.mutate('VOIDED')}
-            className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold text-xs transition-all disabled:opacity-50"
+            className="w-full flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 text-zinc-200 font-bold text-xs transition-colors disabled:opacity-50"
           >
-            <XCircle className="w-4 h-4" />
+            <XCircle className="w-4 h-4" aria-hidden="true" />
             <span>Simular Transacción Anulada (VOIDED)</span>
           </button>
         </div>
