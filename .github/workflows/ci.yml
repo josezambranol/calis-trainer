@@ -29,6 +29,9 @@ jobs:
       - name: Run linter
         run: npm run lint
 
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Run tests
         run: npm test
 
@@ -53,3 +56,19 @@ jobs:
 
       - name: Run unit and integration tests
         run: mvn -B verify
+
+  security-scan:
+    name: Security Scan (Trivy Filesystem)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          exit-code: '1'

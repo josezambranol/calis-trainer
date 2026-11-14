@@ -82,6 +82,10 @@ public class WebPushClient implements PushClient {
         if (!enabled || pushService == null) {
             return new PushDeliveryResult(503, false, false);
         }
+        if (!PushEndpointValidator.isSafeExternalEndpoint(subscription.getEndpoint())) {
+            log.warn("Bloqueado envío Web Push a endpoint restringido subscriptionId={}", subscription.getId());
+            return PushDeliveryResult.fromHttpStatus(410);
+        }
 
         try {
             Notification notification = new Notification(

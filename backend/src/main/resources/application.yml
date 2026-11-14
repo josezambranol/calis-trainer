@@ -53,3 +53,10 @@ app:
     subject: ${VAPID_SUBJECT:mailto:soporte@calishome.app}
     vapid-public-key: ${VAPID_PUBLIC_KEY:}
     vapid-private-key: ${VAPID_PRIVATE_KEY:}
+  security:
+    trust-forwarded-headers: ${TRUST_FORWARDED_HEADERS:false}
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
+    global-rate-limit:
+      enabled: ${GLOBAL_RATE_LIMIT_ENABLED:true}
+      requests-per-minute: ${GLOBAL_RATE_LIMIT_RPM:120}

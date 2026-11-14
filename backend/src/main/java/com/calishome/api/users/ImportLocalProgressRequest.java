@@ -24,11 +24,13 @@ public record ImportLocalProgressRequest(
 
             Integer durationMinutes,
 
-            List<String> scheduledDays,
+            @Size(max = 7)
+            List<@Size(max = 20) String> scheduledDays,
 
             @Pattern(regexp = "^([01]\\d|2[0-3]):[0-5]\\d$")
             String reminderTime,
 
+            @Size(max = 64)
             String timezone,
 
             Boolean notificationsEnabled,
@@ -44,6 +46,7 @@ public record ImportLocalProgressRequest(
 
     public record ImportedWorkoutLog(
             @NotBlank
+            @Size(max = 64)
             String date,
 
             @NotBlank

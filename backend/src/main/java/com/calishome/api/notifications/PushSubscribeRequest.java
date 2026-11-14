@@ -10,8 +10,8 @@ public record PushSubscribeRequest(
         @NotBlank(message = "El endpoint Push es obligatorio.")
         @Size(max = 2048, message = "El endpoint Push excede el tamaño permitido.")
         @Pattern(
-                regexp = "^https?://.+",
-                message = "El endpoint Push debe ser una URL válida."
+                regexp = "^https://.+",
+                message = "El endpoint Push debe ser una URL HTTPS válida."
         )
         String endpoint,
 

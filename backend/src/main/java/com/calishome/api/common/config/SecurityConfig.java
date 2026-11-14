@@ -1,12 +1,16 @@
 package com.calishome.api.common.config;
 
 import com.calishome.api.auth.AuthProperties;
+import com.calishome.api.common.security.ClientIpResolver;
+import com.calishome.api.common.security.GlobalRateLimitFilter;
+import com.calishome.api.common.security.SecurityProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.function.Supplier;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -17,6 +21,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -28,26 +33,36 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.csrf.CsrfTokenRequestHandler;
 import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.util.StringUtils;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties(AuthProperties.class)
+@EnableConfigurationProperties({AuthProperties.class, SecurityProperties.class})
 public class SecurityConfig {
 
     private final ObjectMapper objectMapper;
 
     public SecurityConfig(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
+    }
+
+    @Bean
+    public ClientIpResolver clientIpResolver(SecurityProperties securityProperties) {
+        return new ClientIpResolver(securityProperties);
     }
 
     @Bean
@@ -77,7 +92,30 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtDecoder jwtDecoder) throws Exception {
+    public CorsConfigurationSource corsConfigurationSource(SecurityProperties securityProperties) {
+        CorsConfiguration configuration = new CorsConfiguration();
+        List<String> origins = (securityProperties.cors() != null
+                && securityProperties.cors().allowedOrigins() != null
+                && !securityProperties.cors().allowedOrigins().isEmpty())
+                ? securityProperties.cors().allowedOrigins()
+                : List.of("http://localhost:5173");
+        configuration.setAllowedOrigins(origins);
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-XSRF-TOKEN", "Accept"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", configuration);
+        return source;
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            JwtDecoder jwtDecoder,
+            SecurityProperties securityProperties,
+            ClientIpResolver clientIpResolver) throws Exception {
         CookieCsrfTokenRepository csrfRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrfRepository.setCookiePath("/");
 
@@ -88,16 +126,37 @@ public class SecurityConfig {
                 mvcMatcher.matcher(HttpMethod.POST, "/api/v1/auth/logout")
         );
 
+        GlobalRateLimitFilter globalRateLimitFilter = new GlobalRateLimitFilter(
+                securityProperties,
+                clientIpResolver,
+                objectMapper
+        );
+
         return http
+                .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfRepository)
                         .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
                         .requireCsrfProtectionMatcher(csrfProtectedRoutes)
                 )
+                .headers(headers -> headers
+                        .contentTypeOptions(Customizer.withDefaults())
+                        .frameOptions(frame -> frame.deny())
+                        .referrerPolicy(ref -> ref.policy(
+                                ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                        .permissionsPolicyHeader(perm -> perm.policy(
+                                "geolocation=(), microphone=(), camera=(), payment=()"))
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .includeSubDomains(true)
+                                .maxAgeInSeconds(31536000))
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(
+                                "default-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"))
+                )
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .addFilterBefore(globalRateLimitFilter, BearerTokenAuthenticationFilter.class)
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.decoder(jwtDecoder))
                         .authenticationEntryPoint((request, response, authException) ->

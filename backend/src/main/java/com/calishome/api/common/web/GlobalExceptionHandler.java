@@ -1,5 +1,6 @@
 package com.calishome.api.common.web;
 
+import jakarta.validation.ConstraintViolationException;
 import java.net.URI;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -51,6 +52,26 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                         ))
         );
         return ResponseEntity.badRequest().body(problem);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ProblemDetail handleConstraintViolation(ConstraintViolationException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST,
+                "Parámetros de solicitud inválidos."
+        );
+        problem.setTitle("Error de validación");
+        problem.setType(URI.create("https://calishome.app/errors/validation"));
+        problem.setProperty(
+                "errors",
+                ex.getConstraintViolations().stream()
+                        .collect(Collectors.toMap(
+                                v -> v.getPropertyPath().toString(),
+                                v -> v.getMessage() != null ? v.getMessage() : "Valor inválido",
+                                (first, second) -> first
+                        ))
+        );
+        return problem;
     }
 
     @ExceptionHandler(Exception.class)

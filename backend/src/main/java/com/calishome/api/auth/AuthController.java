@@ -1,5 +1,6 @@
 package com.calishome.api.auth;
 
+import com.calishome.api.common.security.ClientIpResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,14 +26,17 @@ public class AuthController {
     private final AuthService authService;
     private final AuthRateLimiter rateLimiter;
     private final AuthProperties authProperties;
+    private final ClientIpResolver clientIpResolver;
 
     public AuthController(
             AuthService authService,
             AuthRateLimiter rateLimiter,
-            AuthProperties authProperties) {
+            AuthProperties authProperties,
+            ClientIpResolver clientIpResolver) {
         this.authService = authService;
         this.rateLimiter = rateLimiter;
         this.authProperties = authProperties;
+        this.clientIpResolver = clientIpResolver;
     }
 
     @GetMapping("/csrf")
@@ -155,10 +159,6 @@ public class AuthController {
     }
 
     private String resolveClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
+        return clientIpResolver.resolve(request);
     }
 }

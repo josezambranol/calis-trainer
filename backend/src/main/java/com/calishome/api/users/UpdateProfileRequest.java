@@ -1,6 +1,7 @@
 package com.calishome.api.users;
 
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record UpdateProfileRequest(
@@ -18,7 +19,8 @@ public record UpdateProfileRequest(
 
         Integer durationMinutes,
 
-        List<String> scheduledDays,
+        @Size(max = 7, message = "Máximo 7 días programados por semana.")
+        List<@Size(max = 20) String> scheduledDays,
 
         @Pattern(
                 regexp = "^([01]\\d|2[0-3]):[0-5]\\d$",
@@ -26,6 +28,7 @@ public record UpdateProfileRequest(
         )
         String reminderTime,
 
+        @Size(max = 64, message = "La zona horaria excede la longitud máxima.")
         String timezone,
 
         Boolean notificationsEnabled,

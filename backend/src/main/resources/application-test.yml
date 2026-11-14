@@ -23,6 +23,13 @@ app:
       enabled: false
   push:
     scheduler-enabled: false
+  security:
+    trust-forwarded-headers: false
+    cors:
+      allowed-origins: http://localhost:5173
+    global-rate-limit:
+      enabled: false
+      requests-per-minute: 120
 
 logging:
   level:

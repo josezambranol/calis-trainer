@@ -6,6 +6,12 @@ import { AuthProvider } from './context/AuthContext';
 import './index.css';
 import App from './App.tsx';
 
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+  });
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

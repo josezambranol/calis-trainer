@@ -36,6 +36,13 @@ app:
   push:
     vapid-public-key: ${VAPID_PUBLIC_KEY}
     vapid-private-key: ${VAPID_PRIVATE_KEY}
+  security:
+    trust-forwarded-headers: ${TRUST_FORWARDED_HEADERS:true}
+    cors:
+      allowed-origins: ${CORS_ALLOWED_ORIGINS}
+    global-rate-limit:
+      enabled: true
+      requests-per-minute: ${GLOBAL_RATE_LIMIT_RPM:120}
 
 logging:
   level:

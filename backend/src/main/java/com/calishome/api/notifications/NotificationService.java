@@ -65,9 +65,18 @@ public class NotificationService {
         userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado."));
 
-        String endpoint = request.endpoint().trim();
+        String endpoint = PushEndpointValidator.validateExternalHttpsEndpoint(request.endpoint());
         PushSubscriptionEntity entity = subscriptionRepository.findByEndpoint(endpoint)
                 .orElseGet(PushSubscriptionEntity::new);
+
+        if (entity.getId() != null && !entity.getUserId().equals(userId)) {
+            throw new ApiException(
+                    HttpStatus.FORBIDDEN,
+                    "Suscripción no autorizada",
+                    "Este endpoint Push ya está asociado a otra cuenta.",
+                    "push-endpoint-ownership-conflict"
+            );
+        }
 
         entity.setUserId(userId);
         entity.setEndpoint(endpoint);

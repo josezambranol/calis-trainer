@@ -3,6 +3,7 @@ package com.calishome.api.routines;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record RoutinePreviewRequest(
@@ -20,8 +21,10 @@ public record RoutinePreviewRequest(
 
         Integer durationMinutes,
 
-        List<String> scheduledDays,
+        @Size(max = 7, message = "Máximo 7 días programados por semana.")
+        List<@Size(max = 20) String> scheduledDays,
 
+        @Size(max = 64, message = "La zona horaria excede la longitud máxima.")
         String timezone,
 
         @Min(-3) @Max(3)
