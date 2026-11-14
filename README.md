@@ -34,6 +34,7 @@ calishome/
    - **Frontend (PWA):** http://localhost:5173
    - **Backend Health:** http://localhost:8080/api/v1/health
    - **Swagger / OpenAPI (perfil `dev`):** http://localhost:8080/swagger-ui.html
+   - **Mailpit SMTP Web UI (dev):** http://localhost:8026
 
 ---
 
@@ -62,6 +63,11 @@ calishome/
 | `POST` | `/api/v1/routines/preview` | Vista previa semanal en onboarding antes de registrarse | Público |
 | `GET` | `/api/v1/workouts` | Historial de sesiones completadas del usuario | Bearer JWT |
 | `POST` | `/api/v1/workouts` | Registra sesión, recalcula racha y `adaptationScore` (`-3` a `+3`) | Bearer JWT |
+| `GET` | `/api/v1/notifications/vapid-public-key` | Clave pública VAPID del servidor para Web Push | Público |
+| `GET` | `/api/v1/notifications/status` | Dispositivos Web Push activos del usuario | Bearer JWT |
+| `POST` | `/api/v1/notifications/subscribe` | Registra o actualiza suscripción Push (`endpoint`, `p256dh`, `auth`) | Bearer JWT |
+| `DELETE` | `/api/v1/notifications/unsubscribe` | Elimina suscripción Push de un dispositivo | Bearer JWT |
+| `POST` | `/api/v1/notifications/test` | Envía notificación Web Push de prueba desde el backend | Bearer JWT |
 
 ---
 
@@ -89,4 +95,5 @@ npm run build
 - **Fase 1:** ✅ Monorepo, PostgreSQL + Flyway, `/api/v1/health`, RFC 7807, Docker Compose y CI.
 - **Fase 2:** ✅ Modelo de datos (`V2__core_schema.sql`), Argon2id, JWT + Refresh rotativo (`HttpOnly` + CSRF + reuse detection), verificación de email, recuperación de contraseña, lockout, Bucket4j rate limiting y Google OIDC.
 - **Fase 3:** ✅ Catálogo de 24 ejercicios en PostgreSQL (`V3__seed_exercises.sql`), motor determinista de rutinas por objetivo y zona horaria, historial de entrenamientos, cálculo justo de racha, `React Router` + `TanStack Query` + `react-hook-form` + `Zod`, onboarding previo al registro e importación idempotente desde `localStorage`.
-- **Siguiente:** Fase 4 (Notificaciones Web Push con VAPID desde backend + PWA instalable/offline).
+- **Fase 4:** ✅ Web Push VAPID desde backend (`V4__push_subscriptions.sql` + `nl.martijndwars:web-push`), scheduler por zona horaria con deduplicación diaria y limpieza de `410 Gone`, Mailpit en Docker para correos SMTP dev, PWA instalable con app-shell offline (`sw.js` + `manifest.json`) y code splitting (`React.lazy`).
+- **Siguiente:** Fase 5 (Planes Freemium/Pro con pasarela de pagos Wompi/Stripe, métricas de uso y hardening de producción).

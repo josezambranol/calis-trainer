@@ -45,3 +45,11 @@ app:
     rate-limit:
       enabled: true
       requests-per-minute: 10
+  mail:
+    from: ${MAIL_FROM:no-reply@calishome.app}
+  push:
+    enabled: ${PUSH_ENABLED:true}
+    scheduler-enabled: ${PUSH_SCHEDULER_ENABLED:true}
+    subject: ${VAPID_SUBJECT:mailto:soporte@calishome.app}
+    vapid-public-key: ${VAPID_PUBLIC_KEY:}
+    vapid-private-key: ${VAPID_PRIVATE_KEY:}

@@ -21,6 +21,8 @@ app:
       client-id: test-google-client-id.apps.googleusercontent.com
     rate-limit:
       enabled: false
+  push:
+    scheduler-enabled: false
 
 logging:
   level:

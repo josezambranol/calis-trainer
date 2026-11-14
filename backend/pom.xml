@@ -22,6 +22,7 @@
         <springdoc.version>2.8.17</springdoc.version>
         <bouncycastle.version>1.87</bouncycastle.version>
         <bucket4j.version>8.22.0</bucket4j.version>
+        <webpush.version>5.1.2</webpush.version>
     </properties>
 
     <dependencies>
@@ -76,10 +77,25 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Transactional Email -->
+        <!-- Transactional Email & Web Push -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>nl.martijndwars</groupId>
+            <artifactId>web-push</artifactId>
+            <version>${webpush.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpcore</artifactId>
+            <version>4.4.16</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bitbucket.b_c</groupId>
+            <artifactId>jose4j</artifactId>
+            <version>0.7.9</version>
         </dependency>
 
         <!-- Observability & OpenAPI -->

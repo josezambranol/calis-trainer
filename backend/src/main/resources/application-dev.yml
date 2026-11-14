@@ -3,6 +3,11 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/calishome}
     username: ${DB_USERNAME:calishome}
     password: ${DB_PASSWORD:calishome_dev}
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
 
 springdoc:
   api-docs:

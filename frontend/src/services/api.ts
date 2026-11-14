@@ -292,3 +292,57 @@ export const workoutApi = {
     };
   },
 };
+
+export interface VapidKeyResponse {
+  enabled: boolean;
+  publicKey: string;
+}
+
+export interface NotificationStatusResponse {
+  pushEnabled: boolean;
+  activeDevicesCount: number;
+}
+
+export interface PushTestResponse {
+  sentCount: number;
+  removedExpiredCount: number;
+  message: string;
+}
+
+export const notificationApi = {
+  getVapidPublicKey(): Promise<VapidKeyResponse> {
+    return apiRequest<VapidKeyResponse>('/api/v1/notifications/vapid-public-key', {
+      auth: false,
+    });
+  },
+
+  getStatus(): Promise<NotificationStatusResponse> {
+    return apiRequest<NotificationStatusResponse>('/api/v1/notifications/status');
+  },
+
+  subscribe(payload: {
+    endpoint: string;
+    keys: {
+      p256dh: string;
+      auth: string;
+    };
+  }): Promise<NotificationStatusResponse> {
+    return apiRequest<NotificationStatusResponse>('/api/v1/notifications/subscribe', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  unsubscribe(endpoint: string): Promise<void> {
+    return apiRequest<void>('/api/v1/notifications/unsubscribe', {
+      method: 'DELETE',
+      body: JSON.stringify({ endpoint }),
+    });
+  },
+
+  sendTest(): Promise<PushTestResponse> {
+    return apiRequest<PushTestResponse>('/api/v1/notifications/test', {
+      method: 'POST',
+    });
+  },
+};

@@ -1,17 +1,20 @@
 {
+  "id": "/",
   "name": "CalisHome - Rutinas Sin Material",
   "short_name": "CalisHome",
   "description": "Entrena en casa con cero material, rutinas adaptativas y recordatorios automáticos.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#020617",
   "theme_color": "#10b981",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }

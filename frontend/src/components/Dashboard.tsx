@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Play,
   Calendar,
@@ -6,6 +7,7 @@ import {
   Flame,
   Award,
   Bell,
+  BellRing,
   Search,
   CheckCircle2,
   ChevronDown,
@@ -25,7 +27,15 @@ import type {
   WorkoutLog,
 } from '../types';
 import { DAYS_MAP } from '../utils/routineGenerator';
-import { sendTestNotification, requestNotificationPermission } from '../utils/notifications';
+import { notificationApi } from '../services/api';
+import {
+  getExistingPushSubscription,
+  isPushSupported,
+  requestNotificationPermission,
+  sendTestNotification,
+  subscribeToWebPush,
+  unsubscribeFromWebPush,
+} from '../utils/notifications';
 
 const GOAL_LABELS: Record<Goal, string> = {
   fuerza_hipertrofia: 'Fuerza e Hipertrofia',
@@ -67,14 +77,76 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory | 'all'>('all');
   const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
 
-  // Notification testing state
+  // Notification testing & Web Push state
+  const queryClient = useQueryClient();
   const [notificationMsg, setNotificationMsg] = useState('');
+  const [localPushSubscribed, setLocalPushSubscribed] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const pushSupported = isPushSupported();
+
+  const notificationStatusQuery = useQuery({
+    queryKey: ['notificationStatus'],
+    queryFn: () => notificationApi.getStatus(),
+    enabled: isAuthenticated,
+    staleTime: 60 * 1000,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    void getExistingPushSubscription().then((sub) => {
+      if (!cancelled) {
+        setLocalPushSubscribed(Boolean(sub));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
+
+  const handleToggleWebPush = async () => {
+    setPushBusy(true);
+    try {
+      if (localPushSubscribed) {
+        await unsubscribeFromWebPush();
+        setLocalPushSubscribed(false);
+        setNotificationMsg('Web Push desactivado en este dispositivo.');
+      } else {
+        await subscribeToWebPush();
+        setLocalPushSubscribed(true);
+        setNotificationMsg('✅ Web Push activado en segundo plano.');
+      }
+      await queryClient.invalidateQueries({ queryKey: ['notificationStatus'] });
+    } catch (err) {
+      setNotificationMsg(
+        err instanceof Error ? `⚠️ ${err.message}` : '⚠️ No se pudo actualizar Web Push.'
+      );
+    } finally {
+      setPushBusy(false);
+      setTimeout(() => setNotificationMsg(''), 4500);
+    }
+  };
 
   const handleTestNotification = async () => {
+    if (isAuthenticated && localPushSubscribed) {
+      try {
+        const res = await notificationApi.sendTest();
+        setNotificationMsg(res.message);
+        await queryClient.invalidateQueries({ queryKey: ['notificationStatus'] });
+        setTimeout(() => setNotificationMsg(''), 4500);
+        return;
+      } catch (err) {
+        setNotificationMsg(
+          err instanceof Error ? `⚠️ ${err.message}` : '⚠️ Falló el envío Push del servidor.'
+        );
+        setTimeout(() => setNotificationMsg(''), 4500);
+        return;
+      }
+    }
+
     const perm = await requestNotificationPermission();
     if (perm === 'granted') {
       sendTestNotification();
-      setNotificationMsg('✅ ¡Notificación enviada a tu dispositivo!');
+      setNotificationMsg('✅ ¡Notificación local enviada a tu dispositivo!');
     } else {
       setNotificationMsg('⚠️ Permiso denegado por el navegador.');
     }
@@ -328,17 +400,73 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between">
-            <button
-              onClick={handleTestNotification}
-              className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center space-x-1.5"
-            >
-              <Bell className="w-4 h-4" />
-              <span>🔔 Probar Notificación Ahora</span>
-            </button>
-            {notificationMsg && (
-              <span className="text-xs font-semibold text-emerald-400">{notificationMsg}</span>
+          <div className="mt-6 pt-4 border-t border-slate-800 space-y-3">
+            {isAuthenticated ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-950/60 border border-slate-800 rounded-2xl px-3.5 py-2.5">
+                <div className="text-xs">
+                  <span className="font-semibold text-slate-200 block">
+                    Push en segundo plano{' '}
+                    {notificationStatusQuery.data?.activeDevicesCount
+                      ? `(${notificationStatusQuery.data.activeDevicesCount} dispositivo${
+                          notificationStatusQuery.data.activeDevicesCount > 1 ? 's' : ''
+                        })`
+                      : ''}
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    {!pushSupported
+                      ? 'Este navegador no soporta PushManager.'
+                      : localPushSubscribed
+                      ? 'Recibirás alertas incluso con la app cerrada.'
+                      : 'Actívalo para avisos aunque cierres la pestaña.'}
+                  </span>
+                </div>
+                {pushSupported && (
+                  <button
+                    type="button"
+                    disabled={pushBusy}
+                    onClick={() => void handleToggleWebPush()}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center space-x-1.5 ${
+                      localPushSubscribed
+                        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/25'
+                        : 'bg-emerald-500 text-slate-950 hover:bg-emerald-400'
+                    } disabled:opacity-50`}
+                  >
+                    <BellRing className="w-3.5 h-3.5" />
+                    <span>
+                      {pushBusy
+                        ? 'Procesando...'
+                        : localPushSubscribed
+                        ? 'Push Activo (Desactivar)'
+                        : 'Activar Push'}
+                    </span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <p className="text-[11px] text-slate-400">
+                Inicia sesión para recibir recordatorios Web Push incluso con la app cerrada.
+              </p>
             )}
+
+            <div className="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => void handleTestNotification()}
+                className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center space-x-1.5"
+              >
+                <Bell className="w-4 h-4" />
+                <span>
+                  {isAuthenticated && localPushSubscribed
+                    ? '🔔 Enviar Push de Prueba'
+                    : '🔔 Probar Notificación Ahora'}
+                </span>
+              </button>
+              {notificationMsg && (
+                <span className="text-xs font-semibold text-emerald-400 text-right">
+                  {notificationMsg}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

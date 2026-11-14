@@ -116,6 +116,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/**",
                                 "/api/v1/exercises/**",
                                 "/api/v1/routines/preview",
+                                "/api/v1/notifications/vapid-public-key",
                                 "/actuator/health",
                                 "/actuator/health/**",
                                 "/v3/api-docs/**",

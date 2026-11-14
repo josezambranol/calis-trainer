@@ -16,14 +16,17 @@ public class SmtpOrLoggingEmailSender implements EmailSender {
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
     private final AuthProperties authProperties;
     private final String mailHost;
+    private final String mailFrom;
 
     public SmtpOrLoggingEmailSender(
             ObjectProvider<JavaMailSender> mailSenderProvider,
             AuthProperties authProperties,
-            @Value("${spring.mail.host:}") String mailHost) {
+            @Value("${spring.mail.host:}") String mailHost,
+            @Value("${app.mail.from:no-reply@calishome.app}") String mailFrom) {
         this.mailSenderProvider = mailSenderProvider;
         this.authProperties = authProperties;
         this.mailHost = mailHost;
+        this.mailFrom = mailFrom;
     }
 
     @Override
@@ -52,6 +55,7 @@ public class SmtpOrLoggingEmailSender implements EmailSender {
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
         if (mailSender != null && mailHost != null && !mailHost.isBlank()) {
             SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(mailFrom);
             message.setTo(toEmail);
             message.setSubject(subject);
             message.setText(body);
