@@ -19,6 +19,17 @@ export interface BodyPose {
   ankle2?: Point2D;
 }
 
+export type MuscleGroupId =
+  | 'chest'
+  | 'shoulders'
+  | 'triceps'
+  | 'lats'
+  | 'abs'
+  | 'glutes'
+  | 'quads'
+  | 'hamstrings'
+  | 'calves';
+
 export interface ExerciseMotionSpec {
   id: string;
   environment: 'floor' | 'wall-right' | 'wall-left' | 'elevated-feet';
@@ -27,6 +38,7 @@ export interface ExerciseMotionSpec {
   concentricCue: string;
   isometricCue?: string;
   primaryMuscles: string;
+  activeMuscles: MuscleGroupId[];
   cycleMs: number;
   isIsometric: boolean;
   highlightJoints: Array<keyof BodyPose>;
@@ -584,6 +596,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     eccentricCue: 'Acerca el pecho controlando codos a 45°',
     concentricCue: 'Empuja fuerte la pared hasta extender codos',
     primaryMuscles: 'Pectoral mayor · Deltoides anterior · Tríceps',
+    activeMuscles: ['chest', 'shoulders', 'triceps'],
     cycleMs: 3200,
     isIsometric: false,
     highlightJoints: ['shoulder', 'elbow'],
@@ -598,6 +611,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     eccentricCue: 'Cadera alineada, baja el pecho hacia el suelo',
     concentricCue: 'Extiende empujando el suelo sin hundir lumbar',
     primaryMuscles: 'Pectoral · Tríceps · Estabilización de core',
+    activeMuscles: ['chest', 'triceps', 'shoulders'],
     cycleMs: 3200,
     isIsometric: false,
     highlightJoints: ['shoulder', 'elbow'],
@@ -612,6 +626,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     eccentricCue: 'Bloque rígido de tobillo a cabeza mientras bajas',
     concentricCue: 'Protrae escápulas arriba sin bloquear hiperextensión',
     primaryMuscles: 'Pectoral · Hombro anterior · Tríceps · Core',
+    activeMuscles: ['chest', 'shoulders', 'triceps', 'abs'],
     cycleMs: 3200,
     isIsometric: false,
     highlightJoints: ['shoulder', 'elbow', 'hip'],
@@ -626,6 +641,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     eccentricCue: 'Flexiona codos hacia atrás sin encoger hombros',
     concentricCue: 'Empuja el suelo extendiendo tríceps por completo',
     primaryMuscles: 'Tríceps braquial · Deltoides posterior',
+    activeMuscles: ['triceps', 'shoulders'],
     cycleMs: 2800,
     isIsometric: false,
     highlightJoints: ['elbow', 'shoulder'],
@@ -640,6 +656,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     eccentricCue: 'Adelanta la coronilla formando triángulo delante de manos',
     concentricCue: 'Empuja hacia atrás abriendo hombros en V',
     primaryMuscles: 'Deltoides anterior y medio · Tríceps',
+    activeMuscles: ['shoulders', 'triceps', 'chest'],
     cycleMs: 3400,
     isIsometric: false,
     highlightJoints: ['shoulder', 'elbow'],
@@ -654,6 +671,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     eccentricCue: 'Codos rozan las costillas hacia el centro del pecho',
     concentricCue: 'Aprieta tríceps e interior de pectoral al subir',
     primaryMuscles: 'Tríceps · Pectoral interno · Core',
+    activeMuscles: ['triceps', 'chest'],
     cycleMs: 3200,
     isIsometric: false,
     highlightJoints: ['elbow', 'shoulder'],
@@ -668,6 +686,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     eccentricCue: 'Controla mayor carga sobre pecho superior y hombros',
     concentricCue: 'Mantén glúteos apretados para no arquear lumbar',
     primaryMuscles: 'Pectoral clavicular · Deltoides · Core',
+    activeMuscles: ['chest', 'shoulders', 'triceps'],
     cycleMs: 3400,
     isIsometric: false,
     highlightJoints: ['shoulder', 'elbow'],
@@ -683,6 +702,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     concentricCue: 'Sostén dorsales y glúteos contraídos sin encoger cuello',
     isometricCue: 'Arco posterior activo: pecho y rodillas despegados',
     primaryMuscles: 'Erectores espinales · Dorsales · Glúteos',
+    activeMuscles: ['lats', 'glutes', 'hamstrings'],
     cycleMs: 3600,
     isIsometric: true,
     highlightJoints: ['shoulder', 'hip'],
@@ -696,6 +716,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     eccentricCue: 'Extiende brazos al frente en Y manteniendo pecho flotando',
     concentricCue: 'Jala codos hacia las caderas juntando omóplatos fuerte',
     primaryMuscles: 'Dorsal ancho · Trapecio medio/inferior · Romboides',
+    activeMuscles: ['lats', 'shoulders'],
     cycleMs: 3400,
     isIsometric: false,
     highlightJoints: ['shoulder', 'elbow'],
@@ -710,6 +731,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     eccentricCue: 'Despega brazo y pierna opuestos alargando al máximo',
     concentricCue: 'Barre el brazo en arco manteniendo abdomen activo',
     primaryMuscles: 'Dorsales · Hombro posterior · Lumbar · Glúteos',
+    activeMuscles: ['lats', 'shoulders', 'glutes'],
     cycleMs: 2200,
     isIsometric: false,
     highlightJoints: ['shoulder', 'hip'],
@@ -723,6 +745,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     eccentricCue: 'Desciende escápulas controlando el contacto con el suelo',
     concentricCue: 'Clava codos contra el suelo para despegar torso alto',
     primaryMuscles: 'Romboides · Trapecio medio · Deltoides posterior',
+    activeMuscles: ['lats', 'shoulders'],
     cycleMs: 3200,
     isIsometric: false,
     highlightJoints: ['shoulder', 'elbow'],
@@ -737,6 +760,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     eccentricCue: 'Cadera atrás y abajo, rodillas siguen línea del pie',
     concentricCue: 'Empuja el suelo desde talón y mediopié al subir',
     primaryMuscles: 'Cuádriceps · Glúteo mayor · Erectores',
+    activeMuscles: ['quads', 'glutes'],
     cycleMs: 3000,
     isIsometric: false,
     highlightJoints: ['hip', 'knee'],
@@ -751,6 +775,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     eccentricCue: 'Desciende vértebra por vértebra sin perder retroversión',
     concentricCue: 'Empuja por talones hasta alinear hombro-cadera-rodilla',
     primaryMuscles: 'Glúteo mayor · Isquiotibiales · Lumbar baja',
+    activeMuscles: ['glutes', 'hamstrings', 'quads'],
     cycleMs: 3200,
     isIsometric: false,
     highlightJoints: ['hip', 'knee'],
@@ -766,6 +791,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     concentricCue: 'Distribuye peso uniforme en talones y respira fluido',
     isometricCue: 'Resistencia isométrica pura a 90° contra pared',
     primaryMuscles: 'Cuádriceps · Glúteos · Estabilidad tibial',
+    activeMuscles: ['quads', 'glutes'],
     cycleMs: 2800,
     isIsometric: true,
     highlightJoints: ['knee', 'hip'],
@@ -779,6 +805,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     eccentricCue: 'Baja la rodilla trasera verticalmente casi rozando el suelo',
     concentricCue: 'Empuja desde la pierna delantera con torso erguido',
     primaryMuscles: 'Cuádriceps · Glúteo medio y mayor · Estabilidad pélvica',
+    activeMuscles: ['quads', 'glutes', 'hamstrings'],
     cycleMs: 3000,
     isIsometric: false,
     highlightJoints: ['knee', 'hip'],
@@ -793,6 +820,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     eccentricCue: 'Baja lento sin rebotar el tendón de Aquiles',
     concentricCue: 'Sube todo lo posible sobre la base del primer metatarsiano',
     primaryMuscles: 'Gastrocnemio · Sóleo · Estabilidad de tobillo',
+    activeMuscles: ['calves'],
     cycleMs: 2600,
     isIsometric: false,
     highlightJoints: ['ankle', 'knee'],
@@ -807,6 +835,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     eccentricCue: 'Desciende profundo concentrando carga en pierna delantera',
     concentricCue: 'Sube empujando el suelo con pie completo sin colapsar rodilla',
     primaryMuscles: 'Cuádriceps unilateral · Glúteo mayor · Equilibrio',
+    activeMuscles: ['quads', 'glutes'],
     cycleMs: 3400,
     isIsometric: false,
     highlightJoints: ['knee', 'hip'],
@@ -821,6 +850,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     eccentricCue: 'Evita que caiga un lado de la pelvis al descender',
     concentricCue: 'Aprieta glúteo de la pierna de apoyo manteniendo la otra firme',
     primaryMuscles: 'Glúteo unilateral · Isquiotibiales · Antirrotación pélvica',
+    activeMuscles: ['glutes', 'hamstrings', 'quads'],
     cycleMs: 3200,
     isIsometric: false,
     highlightJoints: ['hip', 'knee'],
@@ -836,6 +866,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     concentricCue: 'Aprieta glúteos y abdomen para evitar caída lumbar',
     isometricCue: 'Línea recta continua: oreja · hombro · cadera · tobillo',
     primaryMuscles: 'Transverso abdominal · Recto abdominal · Serrato',
+    activeMuscles: ['abs', 'shoulders'],
     cycleMs: 2800,
     isIsometric: true,
     highlightJoints: ['hip', 'shoulder'],
@@ -849,6 +880,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     eccentricCue: 'Alarga brazo y pierna contraria sin despegar lumbar del piso',
     concentricCue: 'Exhala suave al extender y regresa a 90° con control',
     primaryMuscles: 'Core profundo · Antirrotación · Control lumbar',
+    activeMuscles: ['abs'],
     cycleMs: 2600,
     isIsometric: false,
     highlightJoints: ['hip', 'shoulder'],
@@ -862,6 +894,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     eccentricCue: 'Regresa el pie atrás apoyando metatarso firme',
     concentricCue: 'Lleva rodilla hacia el pecho compactando abdomen',
     primaryMuscles: 'Core dinámico · Flexores de cadera · Gasto cardiovascular',
+    activeMuscles: ['abs', 'quads', 'shoulders'],
     cycleMs: 1400,
     isIsometric: false,
     highlightJoints: ['knee', 'hip', 'shoulder'],
@@ -876,6 +909,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     concentricCue: 'Eleva cadera manteniendo torso y piernas en un solo plano',
     isometricCue: 'Empuje lateral firme de hombro y oblicuo inferior',
     primaryMuscles: 'Oblicuos · Cuadrado lumbar · Glúteo medio',
+    activeMuscles: ['abs', 'glutes', 'shoulders'],
     cycleMs: 2800,
     isIsometric: true,
     highlightJoints: ['hip', 'shoulder'],
@@ -890,6 +924,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     eccentricCue: 'Baja piernas muy despacio aplastando lumbar al suelo',
     concentricCue: 'Eleva piernas rectas hasta 85° controlando impulso',
     primaryMuscles: 'Abdomen inferior · Flexores de cadera · Control pélvico',
+    activeMuscles: ['abs', 'quads'],
     cycleMs: 3600,
     isIsometric: false,
     highlightJoints: ['hip', 'knee'],
@@ -905,6 +940,7 @@ export const EXERCISE_MOTIONS: Record<string, ExerciseMotionSpec> = {
     concentricCue: 'Baja piernas solo hasta donde la lumbar siga pegada al piso',
     isometricCue: 'Forma de banana estable con máxima compresión abdominal',
     primaryMuscles: 'Recto abdominal completo · Psoas · Estabilidad dorsal',
+    activeMuscles: ['abs'],
     cycleMs: 2800,
     isIsometric: true,
     highlightJoints: ['hip', 'shoulder'],

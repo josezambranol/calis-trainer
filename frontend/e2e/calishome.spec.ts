@@ -193,9 +193,15 @@ test.describe('CalisHome Full SaaS E2E', () => {
     await expect(page.getByText(/Mateo Ríos/i)).toBeVisible();
     await expect(page.getByText('Telemetría y Analíticas Pro')).toBeVisible();
 
-    // Coach cuantitativo y vistas visuales / agenda / desarrollo / dieta
+    // Coach cuantitativo y ventana modal de técnica anatómica + descripción completa
     await expect(page.getByTestId('precision-coaching-panel')).toBeVisible();
-    await expect(page.locator('[data-testid^="exercise-visualizer-"]').first()).toBeVisible();
+    await page.locator('[data-testid^="open-technique-"]').first().click();
+    const techniqueModal = page.getByTestId('technique-modal');
+    await expect(techniqueModal).toBeVisible();
+    await expect(techniqueModal.locator('[data-testid^="exercise-visualizer-"]')).toBeVisible();
+    await expect(techniqueModal.getByText(/Ejecución Paso a Paso/i)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(techniqueModal).toBeHidden();
 
     await page.getByTestId('workspace-tab-schedule').click();
     await expect(page.getByTestId('schedule-calendar-panel')).toBeVisible();

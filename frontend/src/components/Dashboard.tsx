@@ -11,8 +11,6 @@ import {
   BellRing,
   Search,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
   Sparkles,
   TrendingUp,
   Sliders,
@@ -104,7 +102,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory | 'all'>('all');
-  const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<
     'training' | 'schedule' | 'roadmap' | 'nutrition'
   >('training');
@@ -112,6 +109,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [inspectedExercise, setInspectedExercise] = useState<{ id: string; title: string } | null>(
     null
   );
+
+  useEffect(() => {
+    if (!inspectedExercise) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setInspectedExercise(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [inspectedExercise]);
 
   const queryClient = useQueryClient();
   const [notificationMsg, setNotificationMsg] = useState('');
@@ -967,79 +973,48 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredExercises.map((exercise) => {
-              const isExpanded = expandedExerciseId === exercise.id;
-              return (
-                <article
-                  key={exercise.id}
-                  className="bg-[#090c11] border border-white/10 rounded-xl p-4 hover:border-white/25 transition-colors flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <h3 className="font-bold text-white text-sm">{exercise.name}</h3>
-                      <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-white/[0.06] text-[#c8f135] border border-white/10 shrink-0">
-                        {exercise.difficulty}
-                      </span>
-                    </div>
-
-                    <p className="text-xs text-zinc-400 mb-2.5">
-                      <strong className="text-zinc-200">{t.libraryMuscle}</strong> {exercise.targetMuscle}
-                    </p>
-
-                    <div className="mb-3">
-                      <ExerciseVisualizer
-                        exerciseId={exercise.id}
-                        exerciseTitle={exercise.name}
-                        compact
-                      />
-                    </div>
-
-                    <div className="flex items-center space-x-2 text-[11px] text-zinc-400 ch-tabular">
-                      <span className="bg-white/[0.05] px-2 py-0.5 rounded text-zinc-300">
-                        {exercise.equipment}
-                      </span>
-                      <span>
-                        {exercise.defaultAmount} {exercise.type === 'reps' ? 'reps' : 'seg'}
-                      </span>
-                    </div>
+            {filteredExercises.map((exercise) => (
+              <article
+                key={exercise.id}
+                className="bg-[#090c11] border border-white/10 rounded-xl p-4 hover:border-white/25 transition-colors flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <h3 className="font-bold text-white text-sm">{exercise.name}</h3>
+                    <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-white/[0.06] text-[#c8f135] border border-white/10 shrink-0">
+                      {exercise.difficulty}
+                    </span>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-white/10">
-                    <button
-                      type="button"
-                      aria-expanded={isExpanded}
-                      onClick={() => setExpandedExerciseId(isExpanded ? null : exercise.id)}
-                      className="w-full flex items-center justify-between text-xs font-bold text-zinc-400 hover:text-[#c8f135] transition-colors"
-                    >
-                      <span>{isExpanded ? t.libraryHideTech : t.libraryShowTech}</span>
-                      {isExpanded ? (
-                        <ChevronUp className="w-4 h-4" aria-hidden="true" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4" aria-hidden="true" />
-                      )}
-                    </button>
+                  <p className="text-xs text-zinc-400 mb-3">
+                    <strong className="text-zinc-200">{t.libraryMuscle}</strong> {exercise.targetMuscle}
+                  </p>
 
-                    {isExpanded && (
-                      <div className="mt-3 text-xs space-y-2.5 text-zinc-300">
-                        <ExerciseVisualizer
-                          exerciseId={exercise.id}
-                          exerciseTitle={exercise.name}
-                        />
-                        <ol className="list-decimal list-inside space-y-1">
-                          {exercise.instructions.map((step, i) => (
-                            <li key={i}>{step}</li>
-                          ))}
-                        </ol>
-                        <div className="p-2.5 rounded-lg bg-[#c8f135]/10 border border-[#c8f135]/25 text-[#d9fc5a] text-[11px]">
-                          <span className="font-black">{t.libraryTip} </span>
-                          {exercise.tips}
-                        </div>
-                      </div>
-                    )}
+                  <div className="flex items-center space-x-2 text-[11px] text-zinc-400 ch-tabular">
+                    <span className="bg-white/[0.05] px-2 py-0.5 rounded text-zinc-300">
+                      {exercise.equipment}
+                    </span>
+                    <span>
+                      {exercise.defaultAmount} {exercise.type === 'reps' ? 'reps' : 'seg'}
+                    </span>
                   </div>
-                </article>
-              );
-            })}
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-white/10">
+                  <button
+                    type="button"
+                    data-testid={`open-technique-${exercise.id}`}
+                    onClick={() =>
+                      setInspectedExercise({ id: exercise.id, title: exercise.name })
+                    }
+                    className="w-full inline-flex items-center justify-between px-3 py-2 rounded-lg bg-white/[0.04] hover:bg-[#c8f135]/15 border border-white/10 hover:border-[#c8f135]/40 text-xs font-bold text-zinc-200 hover:text-[#c8f135] transition-colors cursor-pointer"
+                  >
+                    <span>{t.libraryShowTech}</span>
+                    <Eye className="w-4 h-4" aria-hidden="true" />
+                  </button>
+                </div>
+              </article>
+            ))}
           </div>
         )}
       </section>
@@ -1130,38 +1105,84 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </>
       )}
 
-      {/* MODAL DE VISUALIZACIÓN BIOMECÁNICA INTERACTIVA */}
-      {inspectedExercise && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Técnica animada de ${inspectedExercise.title}`}
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-        >
-          <div className="ch-panel-elevated rounded-2xl max-w-lg w-full p-5 space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#c8f135]">
-                  Guía Visual Libre de Copyright
-                </span>
-                <h3 className="text-lg font-black text-white">{inspectedExercise.title}</h3>
+      {/* VENTANA MODAL DE TÉCNICA ANATÓMICA + DESCRIPCIÓN COMPLETA */}
+      {inspectedExercise && (() => {
+        const details = exercises.find((ex) => ex.id === inspectedExercise.id);
+        return (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Técnica y ejecución de ${details?.name ?? inspectedExercise.title}`}
+            data-testid="technique-modal"
+            onClick={() => setInspectedExercise(null)}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="ch-panel-elevated rounded-2xl max-w-2xl w-full p-5 sm:p-6 space-y-4 my-auto border border-white/15 shadow-2xl"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30">
+                      Atlas Anatómico & Técnica
+                    </span>
+                    {details && (
+                      <>
+                        <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded bg-white/[0.06] text-[#c8f135] border border-white/10">
+                          {details.difficulty}
+                        </span>
+                        <span className="text-[11px] text-zinc-400 ch-tabular">
+                          {details.equipment} · {details.defaultAmount}{' '}
+                          {details.type === 'reps' ? 'reps' : 'seg'}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  <h3 className="text-xl font-black text-white">
+                    {details?.name ?? inspectedExercise.title}
+                  </h3>
+                  {details && (
+                    <p className="text-xs text-zinc-300">
+                      <strong className="text-white">{t.libraryMuscle}</strong> {details.targetMuscle}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setInspectedExercise(null)}
+                  aria-label="Cerrar ventana de técnica"
+                  className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300 hover:text-white cursor-pointer shrink-0"
+                >
+                  <X className="w-4 h-4" aria-hidden="true" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setInspectedExercise(null)}
-                aria-label="Cerrar visor biomecánico"
-                className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300 hover:text-white cursor-pointer"
-              >
-                <X className="w-4 h-4" aria-hidden="true" />
-              </button>
+
+              <ExerciseVisualizer
+                exerciseId={inspectedExercise.id}
+                exerciseTitle={details?.name ?? inspectedExercise.title}
+              />
+
+              {details && (
+                <div className="rounded-xl bg-[#090c11] border border-white/10 p-4 space-y-3 text-xs sm:text-sm text-zinc-200">
+                  <h4 className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
+                    Ejecución Paso a Paso
+                  </h4>
+                  <ol className="list-decimal list-inside space-y-1.5 leading-relaxed">
+                    {details.instructions.map((step, i) => (
+                      <li key={i}>{step}</li>
+                    ))}
+                  </ol>
+                  <div className="p-3 rounded-lg bg-[#c8f135]/10 border border-[#c8f135]/25 text-[#d9fc5a] text-xs">
+                    <span className="font-black">{t.libraryTip} </span>
+                    {details.tips}
+                  </div>
+                </div>
+              )}
             </div>
-            <ExerciseVisualizer
-              exerciseId={inspectedExercise.id}
-              exerciseTitle={inspectedExercise.title}
-            />
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };
