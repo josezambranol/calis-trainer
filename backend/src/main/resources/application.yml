@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: calishome-api
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  mvc:
+    problemdetails:
+      enabled: true
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    baseline-on-migrate: false
+    locations: classpath:db/migration
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized

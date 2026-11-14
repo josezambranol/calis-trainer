@@ -1,3 +1,8 @@
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
 # Logs
 logs
 *.log
@@ -7,16 +12,27 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Frontend
+frontend/node_modules
+frontend/dist
+frontend/dist-ssr
+frontend/coverage
 *.local
 
-# Editor directories and files
+# Backend (Java / Maven)
+backend/target/
+backend/.mvn/timing.properties
+*.jar
+*.war
+*.ear
+
+# Editors & OS
 .vscode/*
 !.vscode/extensions.json
 .idea
+*.iml
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
