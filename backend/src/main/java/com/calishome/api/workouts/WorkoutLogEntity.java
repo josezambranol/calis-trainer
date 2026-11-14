@@ -55,6 +55,27 @@ public class WorkoutLogEntity {
         this.createdAt = now;
     }
 
+    public static WorkoutLogEntity create(
+            UUID userId,
+            String routineTitle,
+            Instant completedAt,
+            LocalDate localDate,
+            int durationSeconds,
+            int exercisesCompleted,
+            String feedback,
+            int adaptationScoreAfter) {
+        WorkoutLogEntity entity = new WorkoutLogEntity();
+        entity.userId = userId;
+        entity.routineTitle = routineTitle;
+        entity.completedAt = completedAt;
+        entity.localDate = localDate;
+        entity.durationSeconds = durationSeconds;
+        entity.exercisesCompleted = exercisesCompleted;
+        entity.feedback = feedback;
+        entity.adaptationScoreAfter = adaptationScoreAfter;
+        return entity;
+    }
+
     public UUID getId() {
         return id;
     }

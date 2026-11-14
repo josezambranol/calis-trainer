@@ -16,13 +16,21 @@ import {
   X,
   Info
 } from 'lucide-react';
-import type { DailyRoutine, UserProfile, WorkoutLog } from '../types';
+import type { DailyRoutine, UserProfile, WorkoutFeedback } from '../types';
 import { coach } from '../utils/soundCoach';
+
+export interface CompletedWorkoutPayload {
+  routineTitle: string;
+  durationSeconds: number;
+  exercisesCompleted: number;
+  feedback: WorkoutFeedback;
+}
 
 interface WorkoutPlayerProps {
   routine: DailyRoutine;
   userProfile: UserProfile;
-  onFinishWorkout: (log: WorkoutLog, newAdaptationScore: number) => void;
+  isSaving?: boolean;
+  onFinishWorkout: (payload: CompletedWorkoutPayload) => Promise<void> | void;
   onExit: () => void;
 }
 
@@ -31,6 +39,7 @@ type WorkoutPhase = 'ready' | 'work' | 'rest' | 'finished';
 export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
   routine,
   userProfile,
+  isSaving = false,
   onFinishWorkout,
   onExit,
 }) => {
@@ -175,22 +184,12 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
   };
 
   const handleFinalSave = () => {
-    let scoreAdjustment = 0;
-    if (selectedFeedback === 'too_easy') scoreAdjustment = 1;
-    if (selectedFeedback === 'too_hard') scoreAdjustment = -1;
-
-    const newScore = Math.max(-3, Math.min(3, userProfile.adaptationScore + scoreAdjustment));
-
-    const log: WorkoutLog = {
-      id: 'log_' + Date.now(),
-      date: new Date().toISOString(),
+    void onFinishWorkout({
       routineTitle: routine.title,
-      durationSeconds: elapsedTotalSeconds,
+      durationSeconds: Math.max(1, elapsedTotalSeconds),
       exercisesCompleted: routine.exercises.length,
       feedback: selectedFeedback,
-    };
-
-    onFinishWorkout(log, newScore);
+    });
   };
 
   // Format MM:SS helper
@@ -257,9 +256,10 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
 
           <button
             onClick={handleFinalSave}
-            className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black py-3.5 px-6 rounded-2xl text-base transition-all shadow-xl shadow-emerald-500/25"
+            disabled={isSaving}
+            className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black py-3.5 px-6 rounded-2xl text-base transition-all shadow-xl shadow-emerald-500/25 disabled:opacity-60"
           >
-            <span>Guardar y Ver Mi Dashboard</span>
+            <span>{isSaving ? 'Guardando progreso...' : 'Guardar y Ver Mi Dashboard'}</span>
             <ArrowRight className="w-5 h-5" />
           </button>
         </div>

@@ -28,6 +28,15 @@ services:
       DB_USERNAME: ${POSTGRES_USER:-calishome}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-calishome_dev}
       SERVER_PORT: 8080
+      JWT_SECRET: ${JWT_SECRET:-dev-only-calishome-secret-key-at-least-32-bytes-long-2026}
+      JWT_ISSUER: ${JWT_ISSUER:-calishome-api}
+      COOKIE_SAME_SITE: ${COOKIE_SAME_SITE:-Lax}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     depends_on:

@@ -36,3 +36,12 @@ Este documento registra las decisiones técnicas clave tomadas durante la evoluc
 ## ADR-008: Protección CSRF Selectiva en Endpoints de Cookie + Validación Google OIDC en Servidor
 - **Decisión:** Proteger `/api/v1/auth/refresh` y `/api/v1/auth/logout` mediante `CookieCsrfTokenRepository` + `SpaCsrfTokenRequestHandler` (`X-XSRF-TOKEN`), manteniendo el resto de endpoints stateless vía `Authorization: Bearer`. Para Google Login, el servidor valida el `idToken` contra `https://www.googleapis.com/oauth2/v3/certs` (`NimbusGoogleTokenVerifier`).
 - **Por qué:** Solo los endpoints que dependen de cookies son vulnerables a CSRF; exigir CSRF desde Fase 2 evita dejar una ventana abierta hasta Fase 5, y validar el `idToken` en backend impide suplantación de identidad desde el cliente.
+
+## ADR-009: Motor de Rutinas Determinista en Servidor por Objetivo y Zona Horaria
+- **Decisión:** Migrar la generación de rutinas al backend (`RoutinePlanner` + `RoutineService`), usando una semilla determinista `SHA-256(seedKey + weekStart + dayId + slotIndex)` evaluada en el `ZoneId` IANA del perfil y diferenciando volumen, descansos y selección de ejercicios según `goal` (`fuerza_hipertrofia`, `resistencia_quemagrasa`, `movilidad_salud`).
+- **Alternativas consideradas:** Mantener `routineGenerator.ts` en el cliente con `Math.random()`.
+- **Por qué:** El algoritmo con `Math.random()` cambiaba los ejercicios en cada renderizado de React e ignoraba por completo el `goal` del usuario. Moverlo al servidor garantiza coherencia semanal, personalización real por objetivo y consistencia multidispositivo.
+
+## ADR-010: Racha Consciente de Días Programados + Onboarding Previo e Importación Idempotente
+- **Decisión:** Calcular `streak` en el servidor (`TrainingDayUtil.calculateNextStreak`) verificando que no haya ningún día presente en `scheduledDays` perdido entre `last_completed_local_date` y el entrenamiento actual; además, habilitar un flujo de diagnóstico previo al registro (`POST /api/v1/routines/preview`) e importación idempotente de `localStorage` (`POST /api/v1/users/me/import`).
+- **Por qué:** Exigir días de calendario consecutivos rompía la racha de cualquier atleta que entrene 3 días/semana (p. ej. Lunes-Miércoles-Viernes), y pedir registro antes de mostrar una rutina reducía conversión frente a mostrar el plan personalizado primero.

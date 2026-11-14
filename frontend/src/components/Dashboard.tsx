@@ -15,30 +15,52 @@ import {
   Sliders,
   Dumbbell
 } from 'lucide-react';
-import type { DailyRoutine, DayOfWeek, ExerciseCategory, UserProfile, WorkoutLog } from '../types';
-import { DAYS_MAP, getCurrentDayOfWeek, generateWeeklyPlan } from '../utils/routineGenerator';
-import { EXERCISE_DATABASE } from '../data/exercises';
+import type {
+  DailyRoutine,
+  DayOfWeek,
+  Exercise,
+  ExerciseCategory,
+  Goal,
+  UserProfile,
+  WorkoutLog,
+} from '../types';
+import { DAYS_MAP } from '../utils/routineGenerator';
 import { sendTestNotification, requestNotificationPermission } from '../utils/notifications';
+
+const GOAL_LABELS: Record<Goal, string> = {
+  fuerza_hipertrofia: 'Fuerza e Hipertrofia',
+  resistencia_quemagrasa: 'Resistencia y Quema',
+  movilidad_salud: 'Movilidad y Postura',
+};
 
 interface DashboardProps {
   user: UserProfile;
+  isAuthenticated: boolean;
   todayRoutine: DailyRoutine;
+  weeklyPlan: DailyRoutine[];
+  exercises: Exercise[];
+  isExercisesLoading?: boolean;
   workoutLogs: WorkoutLog[];
   onStartWorkout: (routine: DailyRoutine) => void;
   onOpenSettings: () => void;
+  onOpenAuth: (mode?: 'login' | 'register') => void;
   onUpdateProfile: (updates: Partial<UserProfile>) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
   user,
+  isAuthenticated,
   todayRoutine,
+  weeklyPlan,
+  exercises,
+  isExercisesLoading = false,
   workoutLogs,
   onStartWorkout,
   onOpenSettings,
+  onOpenAuth,
   onUpdateProfile,
 }) => {
-  const currentDay = getCurrentDayOfWeek();
-  const weeklyPlan = generateWeeklyPlan(user);
+  const currentDay = todayRoutine.dayId;
 
   // Exercise library state
   const [searchQuery, setSearchQuery] = useState('');
@@ -75,7 +97,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   // Filter exercises
-  const filteredExercises = EXERCISE_DATABASE.filter((ex) => {
+  const filteredExercises = exercises.filter((ex) => {
     const matchesSearch =
       ex.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ex.targetMuscle.toLowerCase().includes(searchQuery.toLowerCase());
@@ -85,6 +107,32 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+      {!isAuthenticated && (
+        <section className="rounded-2xl bg-emerald-500/10 border border-emerald-500/30 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <span className="text-[11px] font-black uppercase tracking-wider text-emerald-400">
+              Diagnóstico previo al registro
+            </span>
+            <p className="text-xs sm:text-sm text-slate-200">
+              Personaliza tu plan y pruébalo al instante. Crea tu cuenta gratis para guardar tu racha, adaptación progresiva e historial en la nube.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={onOpenSettings}
+              className="px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-emerald-500/50 text-xs font-semibold text-slate-200 transition-colors"
+            >
+              Personalizar Plan
+            </button>
+            <button
+              onClick={() => onOpenAuth('register')}
+              className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black transition-colors shadow-lg shadow-emerald-500/20"
+            >
+              Crear Cuenta Gratis
+            </button>
+          </div>
+        </section>
+      )}
       {/* 1. HERO CARD: ENTRENAMIENTO DE HOY */}
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950/40 border border-slate-800 p-6 sm:p-10 shadow-2xl">
         {/* Glow orb */}
@@ -132,6 +180,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <div className="flex items-center space-x-2 text-slate-300 text-xs sm:text-sm bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700">
                 <Sparkles className="w-4 h-4 text-emerald-400" />
                 <span className="capitalize">Nivel {user.level}</span>
+              </div>
+
+              <div className="flex items-center space-x-2 text-emerald-300 text-xs sm:text-sm bg-emerald-500/10 px-3.5 py-2 rounded-xl border border-emerald-500/30">
+                <span>{GOAL_LABELS[user.goal]}</span>
               </div>
             </div>
 
@@ -363,7 +415,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
           {weeklyPlan.map((dayRoutine) => {
-            const isToday = dayRoutine.id.includes(currentDay);
+            const isToday = dayRoutine.dayId === currentDay;
             return (
               <div
                 key={dayRoutine.id}
@@ -463,6 +515,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Exercises Grid */}
+        {isExercisesLoading ? (
+          <div className="py-10 text-center text-xs text-slate-400">
+            Cargando catálogo de ejercicios desde el servidor...
+          </div>
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredExercises.map((exercise) => {
             const isExpanded = expandedExerciseId === exercise.id;
@@ -521,6 +578,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             );
           })}
         </div>
+        )}
       </section>
 
       {/* 5. HISTORIAL DE ENTRENAMIENTOS */}

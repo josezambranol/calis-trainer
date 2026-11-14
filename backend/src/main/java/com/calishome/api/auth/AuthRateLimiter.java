@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class AuthRateLimiter {
 
+    private static final int MAX_TRACKED_KEYS = 10_000;
+
     private final AuthProperties authProperties;
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
 
@@ -22,6 +24,11 @@ public class AuthRateLimiter {
     public void checkLimit(String action, String clientKey) {
         if (!authProperties.rateLimit().enabled()) {
             return;
+        }
+
+        if (buckets.size() >= MAX_TRACKED_KEYS) {
+            // Evicción simple acotada para evitar crecimiento ilimitado de memoria ante rotación de IPs
+            buckets.clear();
         }
 
         String bucketKey = action + ":" + clientKey;

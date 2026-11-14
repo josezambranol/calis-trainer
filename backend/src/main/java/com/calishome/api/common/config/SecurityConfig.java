@@ -114,6 +114,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/v1/health",
                                 "/api/v1/auth/**",
+                                "/api/v1/exercises/**",
+                                "/api/v1/routines/preview",
                                 "/actuator/health",
                                 "/actuator/health/**",
                                 "/v3/api-docs/**",

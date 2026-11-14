@@ -1,33 +1,60 @@
-import { useState, useEffect } from 'react';
-import type { DailyRoutine, UserProfile, WorkoutLog } from './types';
-import { authService } from './services/auth';
-import { loadWorkoutLogs, saveWorkoutLog, DEFAULT_PROFILE } from './services/storage';
-import { getTodayRoutine } from './utils/routineGenerator';
+import { useEffect, useMemo, useState } from 'react';
+import { Route, Routes, useNavigate } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { DailyRoutine, UserProfile } from './types';
+import { useAuth } from './context/useAuth';
+import { exerciseApi, routineApi, userApi, workoutApi } from './services/api';
+import {
+  DEFAULT_PROFILE,
+  loadGuestOnboardingDraft,
+  saveGuestOnboardingDraft,
+} from './services/storage';
 import { reminderWatcher } from './utils/notifications';
+import { getCurrentDayOfWeek } from './utils/routineGenerator';
 import { Navbar } from './components/Navbar';
 import { Dashboard } from './components/Dashboard';
-import { WorkoutPlayer } from './components/WorkoutPlayer';
-import { AuthModal } from './components/AuthModal';
+import { WorkoutPlayer, type CompletedWorkoutPayload } from './components/WorkoutPlayer';
+import { AuthModal, type AuthModalMode } from './components/AuthModal';
 import { OnboardingModal } from './components/OnboardingModal';
+import { ResetPasswordPage, VerifyEmailPage } from './pages/AuthActionPages';
 
-export function App() {
-  const [user, setUser] = useState<UserProfile | null>(() => authService.getCurrentUser());
+function buildFallbackTodayRoutine(profile: UserProfile): DailyRoutine {
+  const dayId = getCurrentDayOfWeek();
+  return {
+    id: `loading-${dayId}`,
+    dayId,
+    dayName: dayId,
+    title: 'Cargando tu rutina personalizada...',
+    focus: 'Sincronizando con el motor de CalisHome',
+    level: profile.level,
+    goal: profile.goal,
+    estimatedMinutes: profile.duration,
+    exercises: [],
+    isRestDay: false,
+  };
+}
+
+function HomeWorkspace({
+  initialAuthModalMode = null,
+}: {
+  initialAuthModalMode?: AuthModalMode | null;
+}) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user, isAuthenticated, isRestoring, updateCachedUser, logout } = useAuth();
+
+  const [guestProfile, setGuestProfile] = useState<UserProfile>(() => {
+    const draft = loadGuestOnboardingDraft();
+    return draft ? { ...DEFAULT_PROFILE, ...draft } : DEFAULT_PROFILE;
+  });
+
   const [activeWorkoutRoutine, setActiveWorkoutRoutine] = useState<DailyRoutine | null>(null);
-  const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>(() => loadWorkoutLogs());
-
-  // Modals: si no hay usuario, iniciamos con Auth abierto
-  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(() => !authService.getCurrentUser());
+  const [authModalOpen, setAuthModalOpen] = useState(initialAuthModalMode !== null);
+  const [authModalMode, setAuthModalMode] = useState<AuthModalMode>(initialAuthModalMode || 'login');
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
 
-  // Subscribe to auth changes
-  useEffect(() => {
-    const unsubscribe = authService.subscribe((updatedUser) => {
-      setUser(updatedUser);
-    });
-    return () => unsubscribe();
-  }, []);
+  const effectiveProfile = useMemo(() => user || guestProfile, [user, guestProfile]);
 
-  // Background reminder watcher
   useEffect(() => {
     if (user) {
       reminderWatcher.start(
@@ -41,54 +68,143 @@ export function App() {
     return () => reminderWatcher.stop();
   }, [user]);
 
-  // Fallback profile if user is null during preview
-  const currentProfile: UserProfile = user || DEFAULT_PROFILE;
-  const todayRoutine = getTodayRoutine(currentProfile);
+  const exercisesQuery = useQuery({
+    queryKey: ['exercises'],
+    queryFn: () => exerciseApi.list(),
+    staleTime: 5 * 60 * 1000,
+  });
 
-  // Handlers
-  const handleStartWorkout = (routine: DailyRoutine) => {
-    setActiveWorkoutRoutine(routine);
+  const weeklyPlanQuery = useQuery({
+    queryKey: isAuthenticated
+      ? [
+          'weeklyPlan',
+          'auth',
+          user?.id,
+          user?.level,
+          user?.goal,
+          user?.duration,
+          user?.scheduledDays,
+          user?.adaptationScore,
+          user?.timezone,
+        ]
+      : [
+          'weeklyPlan',
+          'preview',
+          guestProfile.level,
+          guestProfile.goal,
+          guestProfile.duration,
+          guestProfile.scheduledDays,
+          guestProfile.timezone,
+        ],
+    queryFn: () =>
+      isAuthenticated
+        ? routineApi.getWeekly()
+        : routineApi.preview({
+            level: guestProfile.level,
+            goal: guestProfile.goal,
+            durationMinutes: guestProfile.duration,
+            scheduledDays: guestProfile.scheduledDays,
+            timezone: guestProfile.timezone,
+            adaptationScore: 0,
+          }),
+    enabled: !isRestoring,
+  });
+
+  const workoutsQuery = useQuery({
+    queryKey: ['workouts', user?.id],
+    queryFn: () => workoutApi.list(30),
+    enabled: isAuthenticated && !isRestoring,
+  });
+
+  const updateProfileMutation = useMutation({
+    mutationFn: (updates: Partial<UserProfile>) => userApi.updateProfile(updates),
+    onSuccess: (updatedUser) => {
+      updateCachedUser(updatedUser);
+      void queryClient.invalidateQueries({ queryKey: ['weeklyPlan'] });
+    },
+  });
+
+  const completeWorkoutMutation = useMutation({
+    mutationFn: (payload: CompletedWorkoutPayload) => workoutApi.complete(payload),
+    onSuccess: (result) => {
+      updateCachedUser(result.user);
+      void queryClient.invalidateQueries({ queryKey: ['workouts'] });
+      void queryClient.invalidateQueries({ queryKey: ['weeklyPlan'] });
+      setActiveWorkoutRoutine(null);
+    },
+  });
+
+  const handleOpenAuth = (mode: AuthModalMode = 'login') => {
+    setAuthModalMode(mode);
+    setAuthModalOpen(true);
   };
 
-  const handleFinishWorkout = (log: WorkoutLog, newAdaptationScore: number) => {
-    const updatedLogs = saveWorkoutLog(log);
-    setWorkoutLogs(updatedLogs);
+  const handleCloseAuth = () => {
+    setAuthModalOpen(false);
+    if (initialAuthModalMode) {
+      navigate('/', { replace: true });
+    }
+  };
 
-    // Calculate streak update
-    const todayStr = new Date().toDateString();
-    let newStreak = currentProfile.streak;
-    if (currentProfile.lastCompletedDate !== todayStr) {
-      newStreak += 1;
+  const handleUpdateProfile = async (updates: Partial<UserProfile>) => {
+    if (isAuthenticated) {
+      await updateProfileMutation.mutateAsync(updates);
+    } else {
+      const next = { ...guestProfile, ...updates };
+      setGuestProfile(next);
+      saveGuestOnboardingDraft({
+        level: next.level,
+        goal: next.goal,
+        duration: next.duration,
+        scheduledDays: next.scheduledDays,
+        reminderTime: next.reminderTime,
+        timezone: next.timezone,
+        notificationsEnabled: next.notificationsEnabled,
+        soundEnabled: next.soundEnabled,
+        voiceCoachEnabled: next.voiceCoachEnabled,
+      });
+    }
+  };
+
+  const handleFinishWorkout = async (payload: CompletedWorkoutPayload) => {
+    if (isAuthenticated) {
+      await completeWorkoutMutation.mutateAsync(payload);
+      return;
     }
 
-    const updatedUser = authService.updateUserProfile({
-      adaptationScore: newAdaptationScore,
-      streak: newStreak,
-      lastCompletedDate: todayStr,
-      totalWorkoutsCompleted: (currentProfile.totalWorkoutsCompleted || 0) + 1,
-    });
-    setUser(updatedUser);
-
+    // Guardar sesión de vista previa en localStorage para importarla automáticamente al crear cuenta/iniciar sesión
+    try {
+      const existingRaw = localStorage.getItem('calishome_workout_logs');
+      const existing = existingRaw ? (JSON.parse(existingRaw) as unknown[]) : [];
+      const newEntry = {
+        id: 'preview_' + Date.now(),
+        date: new Date().toISOString(),
+        ...payload,
+      };
+      localStorage.setItem('calishome_workout_logs', JSON.stringify([newEntry, ...existing]));
+    } catch {
+      // Ignore storage error
+    }
     setActiveWorkoutRoutine(null);
+    handleOpenAuth('register');
   };
 
-  const handleUpdateProfile = (updates: Partial<UserProfile>) => {
-    const updated = authService.updateUserProfile(updates);
-    setUser(updated);
+  const handleLogout = async () => {
+    await logout();
+    handleOpenAuth('login');
   };
 
-  const handleLogout = () => {
-    authService.logout();
-    setIsAuthOpen(true);
-  };
+  const todayRoutine =
+    weeklyPlanQuery.data?.today || buildFallbackTodayRoutine(effectiveProfile);
+  const weeklyPlan = weeklyPlanQuery.data?.days || [];
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* If workout is running, show full-screen player */}
       {activeWorkoutRoutine ? (
         <WorkoutPlayer
           routine={activeWorkoutRoutine}
-          userProfile={currentProfile}
+          userProfile={effectiveProfile}
+          isSaving={completeWorkoutMutation.isPending}
           onFinishWorkout={handleFinishWorkout}
           onExit={() => setActiveWorkoutRoutine(null)}
         />
@@ -96,18 +212,37 @@ export function App() {
         <>
           <Navbar
             user={user}
-            onOpenAuth={() => setIsAuthOpen(true)}
+            onOpenAuth={() => handleOpenAuth('login')}
             onOpenSettings={() => setIsOnboardingOpen(true)}
             onLogout={handleLogout}
           />
 
           <main className="flex-1">
+            {weeklyPlanQuery.isError && (
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+                <div className="rounded-2xl bg-rose-500/10 border border-rose-500/30 p-4 flex items-center justify-between text-xs text-rose-300">
+                  <span>No pudimos conectar con el servidor de CalisHome para generar tu plan.</span>
+                  <button
+                    onClick={() => void weeklyPlanQuery.refetch()}
+                    className="px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 font-bold text-white"
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              </div>
+            )}
+
             <Dashboard
-              user={currentProfile}
+              user={effectiveProfile}
+              isAuthenticated={isAuthenticated}
               todayRoutine={todayRoutine}
-              workoutLogs={workoutLogs}
-              onStartWorkout={handleStartWorkout}
+              weeklyPlan={weeklyPlan}
+              exercises={exercisesQuery.data || []}
+              isExercisesLoading={exercisesQuery.isLoading}
+              workoutLogs={workoutsQuery.data || []}
+              onStartWorkout={(routine) => setActiveWorkoutRoutine(routine)}
               onOpenSettings={() => setIsOnboardingOpen(true)}
+              onOpenAuth={(mode) => handleOpenAuth(mode || 'login')}
               onUpdateProfile={handleUpdateProfile}
             />
           </main>
@@ -120,25 +255,43 @@ export function App() {
         </>
       )}
 
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-        onSuccess={() => {
-          setIsAuthOpen(false);
-          // Si es recién registrado, abrir el cuestionario de diagnóstico
-          setIsOnboardingOpen(true);
-        }}
-      />
+      {authModalOpen && (
+        <AuthModal
+          isOpen={authModalOpen}
+          initialMode={authModalMode}
+          onClose={handleCloseAuth}
+          onAuthenticated={() => {
+            setAuthModalOpen(false);
+            if (initialAuthModalMode) {
+              navigate('/', { replace: true });
+            }
+          }}
+        />
+      )}
 
-      {/* Onboarding / Routine Customizer Modal */}
-      <OnboardingModal
-        isOpen={isOnboardingOpen}
-        initialProfile={user}
-        onSave={handleUpdateProfile}
-        onClose={() => setIsOnboardingOpen(false)}
-      />
+      {isOnboardingOpen && (
+        <OnboardingModal
+          isOpen={isOnboardingOpen}
+          initialProfile={effectiveProfile}
+          onSave={handleUpdateProfile}
+          onClose={() => setIsOnboardingOpen(false)}
+        />
+      )}
     </div>
+  );
+}
+
+export function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<HomeWorkspace key="home" />} />
+      <Route path="/login" element={<HomeWorkspace key="login" initialAuthModalMode="login" />} />
+      <Route path="/register" element={<HomeWorkspace key="register" initialAuthModalMode="register" />} />
+      <Route path="/forgot-password" element={<HomeWorkspace key="forgot" initialAuthModalMode="forgot" />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="*" element={<HomeWorkspace key="fallback" />} />
+    </Routes>
   );
 }
 

@@ -53,6 +53,15 @@ calishome/
 | `POST` | `/api/v1/auth/forgot-password` | Solicita recuperación (anti-enumeración) | Público (Rate Limit) |
 | `POST` | `/api/v1/auth/reset-password` | Restablece clave y revoca sesiones activas | Público |
 | `GET` | `/api/v1/users/me` | Perfil completo del usuario autenticado | Bearer JWT |
+| `GET` | `/api/v1/users/me/profile` | Alias del perfil de entrenamiento autenticado | Bearer JWT |
+| `PATCH` | `/api/v1/users/me/profile` | Actualiza nivel, objetivo, días, horario, zona horaria y audio | Bearer JWT |
+| `POST` | `/api/v1/users/me/import` | Importación idempotente de progreso previo en `localStorage` | Bearer JWT |
+| `GET` | `/api/v1/exercises` | Catálogo de 24 ejercicios (filtros `category`, `difficulty`, `q`) | Público |
+| `GET` | `/api/v1/routines/today` | Rutina determinista de hoy según objetivo y zona horaria | Bearer JWT |
+| `GET` | `/api/v1/routines/weekly` | Plan semanal completo (7 días) del usuario autenticado | Bearer JWT |
+| `POST` | `/api/v1/routines/preview` | Vista previa semanal en onboarding antes de registrarse | Público |
+| `GET` | `/api/v1/workouts` | Historial de sesiones completadas del usuario | Bearer JWT |
+| `POST` | `/api/v1/workouts` | Registra sesión, recalcula racha y `adaptationScore` (`-3` a `+3`) | Bearer JWT |
 
 ---
 
@@ -79,4 +88,5 @@ npm run build
 
 - **Fase 1:** ✅ Monorepo, PostgreSQL + Flyway, `/api/v1/health`, RFC 7807, Docker Compose y CI.
 - **Fase 2:** ✅ Modelo de datos (`V2__core_schema.sql`), Argon2id, JWT + Refresh rotativo (`HttpOnly` + CSRF + reuse detection), verificación de email, recuperación de contraseña, lockout, Bucket4j rate limiting y Google OIDC.
-- **Siguiente:** Fase 3 (catálogo en BD y motor de rutinas en el servidor + integración con frontend).
+- **Fase 3:** ✅ Catálogo de 24 ejercicios en PostgreSQL (`V3__seed_exercises.sql`), motor determinista de rutinas por objetivo y zona horaria, historial de entrenamientos, cálculo justo de racha, `React Router` + `TanStack Query` + `react-hook-form` + `Zod`, onboarding previo al registro e importación idempotente desde `localStorage`.
+- **Siguiente:** Fase 4 (Notificaciones Web Push con VAPID desde backend + PWA instalable/offline).

@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Sparkles, Clock, Calendar, Check, ArrowRight, ArrowLeft, Trophy, Zap, Shield, Flame } from 'lucide-react';
+import { Sparkles, Clock, Calendar, Check, ArrowRight, ArrowLeft, Trophy, Zap, Shield, Flame, X } from 'lucide-react';
 import type { DayOfWeek, Goal, SessionDuration, UserLevel, UserProfile } from '../types';
 import { DAYS_MAP } from '../utils/routineGenerator';
 import { requestNotificationPermission } from '../utils/notifications';
+import { detectBrowserTimezone } from '../services/storage';
 
 interface OnboardingModalProps {
   isOpen: boolean;
   initialProfile?: UserProfile | null;
-  onSave: (data: Partial<UserProfile>) => void;
+  onSave: (data: Partial<UserProfile>) => Promise<void> | void;
   onClose: () => void;
 }
 
@@ -18,8 +19,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   onClose,
 }) => {
   const [step, setStep] = useState(1);
+  const [saving, setSaving] = useState(false);
 
-  // Form states
+  // Form states (el componente se monta fresco cada vez que se abre)
   const [level, setLevel] = useState<UserLevel>(initialProfile?.level || 'intermedio');
   const [goal, setGoal] = useState<Goal>(initialProfile?.goal || 'fuerza_hipertrofia');
   const [duration, setDuration] = useState<SessionDuration>(initialProfile?.duration || 30);
@@ -43,25 +45,38 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   };
 
   const handleFinish = async () => {
-    // Solicitar permiso de notificaciones de una vez
-    await requestNotificationPermission();
-
-    onSave({
-      level,
-      goal,
-      duration,
-      scheduledDays,
-      reminderTime,
-      notificationsEnabled: true,
-    });
-    onClose();
+    setSaving(true);
+    try {
+      await requestNotificationPermission();
+      await onSave({
+        level,
+        goal,
+        duration,
+        scheduledDays,
+        reminderTime,
+        timezone: detectBrowserTimezone(),
+        notificationsEnabled: true,
+      });
+      onClose();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
       <div className="relative w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6 sm:p-8 max-h-[90vh] overflow-y-auto">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Cerrar diagnóstico"
+          className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
         {/* Progress Bar Header */}
-        <div className="mb-6">
+        <div className="mb-6 pr-8">
           <div className="flex items-center justify-between text-xs font-semibold text-slate-400 mb-2">
             <span>PASO {step} DE 4</span>
             <span className="text-emerald-400 font-bold">{Math.round((step / 4) * 100)}% COMPLETADO</span>
@@ -353,9 +368,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           ) : (
             <button
               onClick={handleFinish}
-              className="flex items-center space-x-2 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black px-6 py-2.5 rounded-xl text-sm transition-all shadow-xl shadow-emerald-500/25"
+              disabled={saving}
+              className="flex items-center space-x-2 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black px-6 py-2.5 rounded-xl text-sm transition-all shadow-xl shadow-emerald-500/25 disabled:opacity-60"
             >
-              <span>¡Generar Mi Plan de Rutinas!</span>
+              <span>{saving ? 'Calculando plan...' : '¡Generar Mi Plan de Rutinas!'}</span>
               <Sparkles className="w-4 h-4" />
             </button>
           )}
