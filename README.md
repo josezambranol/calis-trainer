@@ -10,7 +10,7 @@ Aplicación web progresiva (**PWA**) lista para lanzamiento comercial que planif
 flowchart LR
     User["Atleta (Navegador / PWA)"] -->|"HTTPS / CSP / Same-Origin :5173"| Web["Frontend React 19 + Nginx<br/>Offline IndexedDB + SW + i18n"]
     Web -->|"/api/v1/* Reverse Proxy"| Api["Spring Boot 3.5 API (Java 21)<br/>Argon2id · JWT · Rate Limit · Actuator"]
-    Api -->|"Flyway V1..V5 + JPA"| Db[("PostgreSQL 16")]
+    Api -->|"Flyway V1..V6 + JPA"| Db[("PostgreSQL 16")]
     Api -->|"SMTP"| Mail["Mailpit (Dev) / SMTP (Prod)"]
     Api -->|"VAPID ECDSA P-256"| Push["Web Push Service Worker"]
     Api -->|"SHA-256 Webhooks"| Pay["Wompi Colombia / Sandbox $0"]
@@ -27,14 +27,14 @@ calishome/
 │   ├── backup-postgres.sh      # pg_dump comprimido + cifrado AES-256 opcional + SHA-256
 │   └── restore-postgres.sh     # Verificación de checksum + restauración + conteo de integridad
 ├── docs/
-│   ├── decisiones.md           # Registro de decisiones arquitectónicas (ADR-001 .. ADR-015)
+│   ├── decisiones.md           # Registro de decisiones arquitectónicas (ADR-001 .. ADR-016)
 │   ├── amenazas-fase2.md       # Modelo de amenazas de autenticación
 │   ├── auditoria-seguridad-fase5.md # Auditoría OWASP Top 10
 │   └── runbook-produccion.md   # Runbook operativo, despliegue free-tier $0 y DRP
 ├── frontend/                   # React 19 + TS + Tailwind v4 + Vitest + Playwright E2E
 ├── backend/                    # Java 21 + Spring Boot 3.5 + Postgres + Flyway + Testcontainers
 ├── docker-compose.yml          # Stack completo con 1 comando (Postgres + Backend + Nginx + Mailpit)
-└── CHANGELOG.md                # Historial de versiones (v1.0.0)
+└── CHANGELOG.md                # Historial de versiones (v1.1.0)
 ```
 
 ---

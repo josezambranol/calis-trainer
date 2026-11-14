@@ -6,6 +6,10 @@ import com.calishome.api.common.util.TrainingDayUtil;
 import com.calishome.api.common.web.ApiException;
 import com.calishome.api.common.web.ResourceNotFoundException;
 import com.calishome.api.notifications.PushSubscriptionRepository;
+import com.calishome.api.nutrition.NutritionDtos.NutritionLogDto;
+import com.calishome.api.nutrition.NutritionLogRepository;
+import com.calishome.api.planning.ScheduleDtos.ScheduledWorkoutDto;
+import com.calishome.api.planning.ScheduledWorkoutRepository;
 import com.calishome.api.workouts.WorkoutLogEntity;
 import com.calishome.api.workouts.WorkoutLogRepository;
 import com.calishome.api.workouts.WorkoutLogResponse;
@@ -18,6 +22,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,20 +38,27 @@ public class UserService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PushSubscriptionRepository pushSubscriptionRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final ScheduledWorkoutRepository scheduledWorkoutRepository;
+    private final NutritionLogRepository nutritionLogRepository;
 
+    @Autowired
     public UserService(
             UserRepository userRepository,
             UserProfileRepository userProfileRepository,
             WorkoutLogRepository workoutLogRepository,
             RefreshTokenRepository refreshTokenRepository,
             PushSubscriptionRepository pushSubscriptionRepository,
-            SubscriptionRepository subscriptionRepository) {
+            SubscriptionRepository subscriptionRepository,
+            ScheduledWorkoutRepository scheduledWorkoutRepository,
+            NutritionLogRepository nutritionLogRepository) {
         this.userRepository = userRepository;
         this.userProfileRepository = userProfileRepository;
         this.workoutLogRepository = workoutLogRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.pushSubscriptionRepository = pushSubscriptionRepository;
         this.subscriptionRepository = subscriptionRepository;
+        this.scheduledWorkoutRepository = scheduledWorkoutRepository;
+        this.nutritionLogRepository = nutritionLogRepository;
     }
 
     @Transactional(readOnly = true)
@@ -256,6 +268,16 @@ public class UserService {
                 .stream()
                 .map(WorkoutLogResponse::from)
                 .toList();
+        List<ScheduledWorkoutDto> scheduledWorkouts = scheduledWorkoutRepository
+                .findByUserIdOrderByScheduledDateDesc(userId)
+                .stream()
+                .map(ScheduledWorkoutDto::from)
+                .toList();
+        List<NutritionLogDto> nutritionLogs = nutritionLogRepository
+                .findByUserIdOrderByLocalDateDescLoggedAtDesc(userId)
+                .stream()
+                .map(NutritionLogDto::from)
+                .toList();
         List<AccountDataExportResponse.SubscriptionExportDto> subscriptions =
                 subscriptionRepository.findAllByUserIdOrderByCreatedAtDesc(userId)
                         .stream()
@@ -268,6 +290,8 @@ public class UserService {
                 "Ley 1581 de 2012 / GDPR Portability Export",
                 UserResponse.from(user, profile),
                 workoutLogs,
+                scheduledWorkouts,
+                nutritionLogs,
                 subscriptions,
                 pushDevices
         );

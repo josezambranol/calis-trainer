@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import type { DailyRoutine, UserProfile, WorkoutFeedback } from '../types';
 import { coach } from '../utils/soundCoach';
+import { ExerciseVisualizer } from './ExerciseVisualizer';
 
 export interface CompletedWorkoutPayload {
   routineTitle: string;
@@ -368,8 +369,16 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
             <h2 className="text-3xl sm:text-5xl font-black text-white tracking-[-0.03em]">{currentItem.exercise.name}</h2>
             <p className="text-zinc-400 text-sm max-w-md">{currentItem.exercise.targetMuscle}</p>
 
-            <div className="w-32 h-32 mx-auto rounded-full border-4 border-[#c8f135] flex items-center justify-center text-5xl font-black text-white my-4 font-mono ch-tabular shadow-[0_0_32px_rgba(200,241,53,0.18)]">
+            <div className="w-24 h-24 mx-auto rounded-full border-4 border-[#c8f135] flex items-center justify-center text-4xl font-black text-white my-2 font-mono ch-tabular shadow-[0_0_32px_rgba(200,241,53,0.18)]">
               {secondsRemaining}
+            </div>
+
+            <div className="max-w-md mx-auto w-full">
+              <ExerciseVisualizer
+                exerciseId={currentItem.exercise.id}
+                exerciseTitle={currentItem.exercise.name}
+                externalPaused={!isTimerRunning}
+              />
             </div>
 
             <button
@@ -457,11 +466,19 @@ export const WorkoutPlayer: React.FC<WorkoutPlayerProps> = ({
             </div>
 
             <div>
-              <h2 className="text-3xl sm:text-4xl font-black text-white tracking-[-0.03em]">{currentItem.exercise.name}</h2>
+              <h2 className="text-2xl sm:text-4xl font-black text-white tracking-[-0.03em]">{currentItem.exercise.name}</h2>
               <p className="text-sm text-[#c8f135] font-semibold mt-1 flex items-center justify-center space-x-1.5">
                 <Flame className="w-4 h-4" aria-hidden="true" />
                 <span>{currentItem.exercise.targetMuscle}</span>
               </p>
+            </div>
+
+            <div className="max-w-md mx-auto w-full">
+              <ExerciseVisualizer
+                exerciseId={currentItem.exercise.id}
+                exerciseTitle={currentItem.exercise.name}
+                externalPaused={!isTimerRunning}
+              />
             </div>
 
             {currentItem.exercise.type === 'reps' ? (

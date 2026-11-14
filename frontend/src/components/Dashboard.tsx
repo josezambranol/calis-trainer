@@ -21,6 +21,11 @@ import {
   Lock,
   CloudOff,
   BedDouble,
+  CalendarCheck,
+  GitBranch,
+  Utensils,
+  Eye,
+  X,
 } from 'lucide-react';
 import type {
   DailyRoutine,
@@ -36,6 +41,11 @@ import { notificationApi, workoutApi } from '../services/api';
 import { ApiError } from '../services/apiClient';
 import type { PendingWorkoutRecord } from '../services/offlineSync';
 import { useI18n } from '../i18n/useI18n';
+import { ExerciseVisualizer } from './ExerciseVisualizer';
+import { CoachingPrecisionPanel } from './CoachingPrecisionPanel';
+import { ScheduleCalendarPanel } from './ScheduleCalendarPanel';
+import { DevelopmentPlanPanel } from './DevelopmentPlanPanel';
+import { NutritionTrackerPanel } from './NutritionTrackerPanel';
 import {
   getExistingPushSubscription,
   isPushSupported,
@@ -95,6 +105,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ExerciseCategory | 'all'>('all');
   const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(null);
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<
+    'training' | 'schedule' | 'roadmap' | 'nutrition'
+  >('training');
+  const [telemetryRefreshKey, setTelemetryRefreshKey] = useState(0);
+  const [inspectedExercise, setInspectedExercise] = useState<{ id: string; title: string } | null>(
+    null
+  );
 
   const queryClient = useQueryClient();
   const [notificationMsg, setNotificationMsg] = useState('');
@@ -209,9 +226,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const totalFeedbackSamples = analytics
     ? Math.max(1, analytics.tooEasyCount + analytics.justRightCount + analytics.tooHardCount)
     : 1;
+  const effectiveRefreshSignal = telemetryRefreshKey + workoutLogs.length;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* GUEST EDITORIAL VALUE PROP BANNER */}
       {!isAuthenticated && (
         <section className="ch-panel rounded-2xl overflow-hidden border-t-2 border-t-[#c8f135]">
@@ -246,6 +264,73 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </section>
       )}
+
+      {/* NAVEGACIÓN DE WORKSPACE DE ALTO IMPACTO */}
+      <nav
+        aria-label="Módulos de entrenamiento, agenda, desarrollo y dieta"
+        className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-[#0d1118] border border-white/10"
+      >
+        {[
+          { id: 'training' as const, label: 'Entrenamiento & Codex', Icon: Dumbbell },
+          { id: 'schedule' as const, label: 'Calendario & Faltas', Icon: CalendarCheck },
+          { id: 'roadmap' as const, label: 'Plan & Habilidades', Icon: GitBranch },
+          { id: 'nutrition' as const, label: 'Dieta & Macros', Icon: Utensils },
+        ].map(({ id, label, Icon }) => {
+          const active = activeWorkspaceTab === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              data-testid={`workspace-tab-${id}`}
+              onClick={() => setActiveWorkspaceTab(id)}
+              className={`flex-1 min-w-[140px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                active
+                  ? 'bg-[#c8f135] text-[#05070a] shadow-[0_4px_18px_rgba(200,241,53,0.2)]'
+                  : 'text-zinc-300 hover:text-white hover:bg-white/[0.05]'
+              }`}
+            >
+              <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
+              <span>{label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* COACH CUANTITATIVO SIN MENSAJES PREPROGRAMADOS */}
+      <CoachingPrecisionPanel
+        isAuthenticated={isAuthenticated}
+        refreshSignal={effectiveRefreshSignal}
+        onNavigateTab={(tab) => setActiveWorkspaceTab(tab)}
+        onRequireAuth={() => onOpenAuth('login')}
+      />
+
+      {activeWorkspaceTab === 'schedule' && (
+        <ScheduleCalendarPanel
+          isAuthenticated={isAuthenticated}
+          onDataChanged={() => setTelemetryRefreshKey((k) => k + 1)}
+          onRequireAuth={() => onOpenAuth('login')}
+        />
+      )}
+
+      {activeWorkspaceTab === 'roadmap' && (
+        <DevelopmentPlanPanel
+          isAuthenticated={isAuthenticated}
+          refreshSignal={effectiveRefreshSignal}
+          onInspectExercise={(id, title) => setInspectedExercise({ id, title })}
+          onRequireAuth={() => onOpenAuth('login')}
+        />
+      )}
+
+      {activeWorkspaceTab === 'nutrition' && (
+        <NutritionTrackerPanel
+          isAuthenticated={isAuthenticated}
+          onDataChanged={() => setTelemetryRefreshKey((k) => k + 1)}
+          onRequireAuth={() => onOpenAuth('login')}
+        />
+      )}
+
+      {activeWorkspaceTab === 'training' && (
+        <>
 
       {/* 1. HERO HUD: SESIÓN DEL DÍA + CIRCUITO TÁCTICO */}
       <section
@@ -402,11 +487,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         <span className="text-zinc-400 text-[11px] block truncate">{item.exercise.targetMuscle}</span>
                       </div>
                     </div>
-                    <div className="text-right shrink-0 ml-3 ch-tabular">
-                      <span className="font-black text-[#c8f135] font-mono">
-                        {item.sets}×{item.repsOrSeconds} {item.exercise.type === 'reps' ? 'reps' : 's'}
-                      </span>
-                      <span className="block text-[10px] text-zinc-500">{item.exercise.equipment}</span>
+                    <div className="text-right shrink-0 ml-3 ch-tabular flex items-center gap-2.5">
+                      <div>
+                        <span className="font-black text-[#c8f135] font-mono">
+                          {item.sets}×{item.repsOrSeconds} {item.exercise.type === 'reps' ? 'reps' : 's'}
+                        </span>
+                        <span className="block text-[10px] text-zinc-500">{item.exercise.equipment}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setInspectedExercise({ id: item.exercise.id, title: item.exercise.name })
+                        }
+                        aria-label={`Ver animación técnica de ${item.exercise.name}`}
+                        className="p-1.5 rounded-lg bg-white/[0.05] hover:bg-[#c8f135]/20 text-zinc-300 hover:text-[#c8f135] transition-colors cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5" aria-hidden="true" />
+                      </button>
                     </div>
                   </li>
                 ))}
@@ -889,6 +986,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       <strong className="text-zinc-200">{t.libraryMuscle}</strong> {exercise.targetMuscle}
                     </p>
 
+                    <div className="mb-3">
+                      <ExerciseVisualizer
+                        exerciseId={exercise.id}
+                        exerciseTitle={exercise.name}
+                        compact
+                      />
+                    </div>
+
                     <div className="flex items-center space-x-2 text-[11px] text-zinc-400 ch-tabular">
                       <span className="bg-white/[0.05] px-2 py-0.5 rounded text-zinc-300">
                         {exercise.equipment}
@@ -915,7 +1020,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </button>
 
                     {isExpanded && (
-                      <div className="mt-3 text-xs space-y-2 text-zinc-300">
+                      <div className="mt-3 text-xs space-y-2.5 text-zinc-300">
+                        <ExerciseVisualizer
+                          exerciseId={exercise.id}
+                          exerciseTitle={exercise.name}
+                        />
                         <ol className="list-decimal list-inside space-y-1">
                           {exercise.instructions.map((step, i) => (
                             <li key={i}>{step}</li>
@@ -1017,6 +1126,41 @@ export const Dashboard: React.FC<DashboardProps> = ({
             })}
           </div>
         </section>
+      )}
+        </>
+      )}
+
+      {/* MODAL DE VISUALIZACIÓN BIOMECÁNICA INTERACTIVA */}
+      {inspectedExercise && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Técnica animada de ${inspectedExercise.title}`}
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+        >
+          <div className="ch-panel-elevated rounded-2xl max-w-lg w-full p-5 space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#c8f135]">
+                  Guía Visual Libre de Copyright
+                </span>
+                <h3 className="text-lg font-black text-white">{inspectedExercise.title}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInspectedExercise(null)}
+                aria-label="Cerrar visor biomecánico"
+                className="p-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300 hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" aria-hidden="true" />
+              </button>
+            </div>
+            <ExerciseVisualizer
+              exerciseId={inspectedExercise.id}
+              exerciseTitle={inspectedExercise.title}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

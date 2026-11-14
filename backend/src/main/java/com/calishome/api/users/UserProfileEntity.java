@@ -10,6 +10,7 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -70,6 +71,24 @@ public class UserProfileEntity {
 
     @Column(name = "adaptation_score", nullable = false)
     private int adaptationScore = 0;
+
+    @Column(name = "weight_kg", nullable = false, precision = 5, scale = 2)
+    private BigDecimal weightKg = new BigDecimal("72.00");
+
+    @Column(name = "height_cm", nullable = false)
+    private int heightCm = 173;
+
+    @Column(nullable = false)
+    private int age = 27;
+
+    @Column(name = "biological_sex", nullable = false, length = 10)
+    private String biologicalSex = "M";
+
+    @Column(name = "activity_level", nullable = false, length = 20)
+    private String activityLevel = "MODERATE";
+
+    @Column(name = "daily_water_goal_ml", nullable = false)
+    private int dailyWaterGoalMl = 2500;
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
@@ -194,6 +213,54 @@ public class UserProfileEntity {
 
     public void setAdaptationScore(int adaptationScore) {
         this.adaptationScore = adaptationScore;
+    }
+
+    public BigDecimal getWeightKg() {
+        return weightKg;
+    }
+
+    public void setWeightKg(BigDecimal weightKg) {
+        this.weightKg = weightKg;
+    }
+
+    public int getHeightCm() {
+        return heightCm;
+    }
+
+    public void setHeightCm(int heightCm) {
+        this.heightCm = heightCm;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    public String getBiologicalSex() {
+        return biologicalSex;
+    }
+
+    public void setBiologicalSex(String biologicalSex) {
+        this.biologicalSex = biologicalSex;
+    }
+
+    public String getActivityLevel() {
+        return activityLevel;
+    }
+
+    public void setActivityLevel(String activityLevel) {
+        this.activityLevel = activityLevel;
+    }
+
+    public int getDailyWaterGoalMl() {
+        return dailyWaterGoalMl;
+    }
+
+    public void setDailyWaterGoalMl(int dailyWaterGoalMl) {
+        this.dailyWaterGoalMl = dailyWaterGoalMl;
     }
 
     public Instant getUpdatedAt() {

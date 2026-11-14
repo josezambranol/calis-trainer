@@ -46,6 +46,14 @@ public class RoutinePlanner {
     ) {
     }
 
+    public static String buildFreestyleFallbackTitle(String level) {
+        return switch (level) {
+            case "avanzado" -> "Sesión Libre Avanzada de Calistenia";
+            case "intermedio" -> "Sesión Progresiva de Calistenia";
+            default -> "Sesión Base de Control Corporal";
+        };
+    }
+
     public WeeklyPlanResponse buildWeeklyPlan(List<ExerciseResponse> catalog, PlanConfig config) {
         LocalDate weekStart = config.localDate().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         String todayId = TrainingDayUtil.toDayId(config.localDate().getDayOfWeek());

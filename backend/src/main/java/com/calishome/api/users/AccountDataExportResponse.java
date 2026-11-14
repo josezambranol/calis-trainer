@@ -1,6 +1,8 @@
 package com.calishome.api.users;
 
 import com.calishome.api.billing.SubscriptionEntity;
+import com.calishome.api.nutrition.NutritionDtos.NutritionLogDto;
+import com.calishome.api.planning.ScheduleDtos.ScheduledWorkoutDto;
 import com.calishome.api.workouts.WorkoutLogResponse;
 import java.time.Instant;
 import java.util.List;
@@ -10,6 +12,8 @@ public record AccountDataExportResponse(
         String privacyFramework,
         UserResponse user,
         List<WorkoutLogResponse> workoutLogs,
+        List<ScheduledWorkoutDto> scheduledWorkouts,
+        List<NutritionLogDto> nutritionLogs,
         List<SubscriptionExportDto> subscriptions,
         long activePushDevicesCount
 ) {

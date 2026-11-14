@@ -1,11 +1,20 @@
 import type {
+  ActivityLevel,
   BillingOverview,
   BillingPlansResponse,
+  BiologicalSex,
+  BiometricsProfile,
   CheckoutSessionResponse,
   DailyRoutine,
   DayOfWeek,
+  DevelopmentRoadmapResponse,
   Exercise,
   Goal,
+  MealType,
+  NutritionDayOverviewResponse,
+  PrecisionCoachingResponse,
+  ScheduleOverviewResponse,
+  ScheduledWorkoutItem,
   SessionDuration,
   UserLevel,
   UserProfile,
@@ -418,5 +427,110 @@ export const billingApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+  },
+};
+
+export const scheduleApi = {
+  getOverview(from?: string, to?: string): Promise<ScheduleOverviewResponse> {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    const qs = params.toString();
+    return apiRequest<ScheduleOverviewResponse>(`/api/v1/schedule${qs ? `?${qs}` : ''}`);
+  },
+
+  upsertSession(payload: {
+    scheduledDate: string;
+    routineTitle: string;
+    focus?: string;
+    durationMinutes?: number;
+  }): Promise<ScheduledWorkoutItem> {
+    return apiRequest<ScheduledWorkoutItem>('/api/v1/schedule/sessions', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  autoPopulate(weeks = 2): Promise<ScheduledWorkoutItem[]> {
+    return apiRequest<ScheduledWorkoutItem[]>('/api/v1/schedule/auto-populate', {
+      method: 'POST',
+      body: JSON.stringify({ weeks }),
+    });
+  },
+
+  rescheduleSession(
+    sessionId: string,
+    payload: { targetDate: string; reason?: string }
+  ): Promise<ScheduledWorkoutItem> {
+    return apiRequest<ScheduledWorkoutItem>(`/api/v1/schedule/sessions/${sessionId}/reschedule`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  recordMissedReason(sessionId: string, reason: string): Promise<ScheduledWorkoutItem> {
+    return apiRequest<ScheduledWorkoutItem>(`/api/v1/schedule/sessions/${sessionId}/missed-reason`, {
+      method: 'PATCH',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  deleteSession(sessionId: string): Promise<void> {
+    return apiRequest<void>(`/api/v1/schedule/sessions/${sessionId}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+export const nutritionApi = {
+  getDay(date?: string): Promise<NutritionDayOverviewResponse> {
+    const qs = date ? `?date=${encodeURIComponent(date)}` : '';
+    return apiRequest<NutritionDayOverviewResponse>(`/api/v1/nutrition/day${qs}`);
+  },
+
+  logIntake(payload: {
+    localDate?: string;
+    mealType: MealType;
+    foodName: string;
+    calories: number;
+    proteinGrams: number;
+    carbsGrams: number;
+    fatsGrams: number;
+    waterMl: number;
+  }): Promise<NutritionDayOverviewResponse> {
+    return apiRequest<NutritionDayOverviewResponse>('/api/v1/nutrition/logs', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deleteLog(id: string): Promise<NutritionDayOverviewResponse> {
+    return apiRequest<NutritionDayOverviewResponse>(`/api/v1/nutrition/logs/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  updateBiometrics(payload: {
+    weightKg: number;
+    heightCm: number;
+    age: number;
+    biologicalSex: BiologicalSex;
+    activityLevel: ActivityLevel;
+    dailyWaterGoalMl: number;
+  }): Promise<BiometricsProfile> {
+    return apiRequest<BiometricsProfile>('/api/v1/nutrition/biometrics', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  getRoadmap(): Promise<DevelopmentRoadmapResponse> {
+    return apiRequest<DevelopmentRoadmapResponse>('/api/v1/nutrition/roadmap');
+  },
+};
+
+export const coachingApi = {
+  getInsights(): Promise<PrecisionCoachingResponse> {
+    return apiRequest<PrecisionCoachingResponse>('/api/v1/coaching/insights');
   },
 };

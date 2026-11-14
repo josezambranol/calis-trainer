@@ -107,6 +107,7 @@ test.describe('CalisHome Full SaaS E2E', () => {
       name: /Reproductor de entrenamiento/i,
     });
     await expect(playerDialog).toBeVisible();
+    await expect(playerDialog.locator('[data-testid^="exercise-visualizer-"]')).toBeVisible();
 
     for (let guard = 0; guard < 90; guard++) {
       const doneHeading = page.getByRole('heading', { name: /Misión Cumplida/i });
@@ -191,5 +192,23 @@ test.describe('CalisHome Full SaaS E2E', () => {
     await expect(dialog).toBeHidden({ timeout: 15_000 });
     await expect(page.getByText(/Mateo Ríos/i)).toBeVisible();
     await expect(page.getByText('Telemetría y Analíticas Pro')).toBeVisible();
+
+    // Coach cuantitativo y vistas visuales / agenda / desarrollo / dieta
+    await expect(page.getByTestId('precision-coaching-panel')).toBeVisible();
+    await expect(page.locator('[data-testid^="exercise-visualizer-"]').first()).toBeVisible();
+
+    await page.getByTestId('workspace-tab-schedule').click();
+    await expect(page.getByTestId('schedule-calendar-panel')).toBeVisible();
+    await expect(page.getByTestId('missed-sessions-alert')).toBeVisible();
+    await page.getByTestId('auto-populate-schedule-btn').click();
+
+    await page.getByTestId('workspace-tab-roadmap').click();
+    await expect(page.getByTestId('development-plan-panel')).toBeVisible();
+    await expect(page.getByText(/Árboles de Progresión Calisténica/i)).toBeVisible();
+
+    await page.getByTestId('workspace-tab-nutrition').click();
+    await expect(page.getByTestId('nutrition-tracker-panel')).toBeVisible();
+    await page.getByText('+ Vaso Grande de Agua / Electrolitos').click();
+    await expect(page.getByText(/Vaso Grande de Agua \/ Electrolitos/i).first()).toBeVisible();
   });
 });

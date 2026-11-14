@@ -4,6 +4,8 @@ import com.calishome.api.billing.BillingService;
 import com.calishome.api.common.util.TrainingDayUtil;
 import com.calishome.api.common.web.ApiException;
 import com.calishome.api.common.web.ResourceNotFoundException;
+import com.calishome.api.planning.ScheduledWorkoutRepository;
+import com.calishome.api.planning.ScheduledWorkoutStatus;
 import com.calishome.api.users.PlanTier;
 import com.calishome.api.users.UserEntity;
 import com.calishome.api.users.UserProfileEntity;
@@ -29,14 +31,22 @@ public class WorkoutService {
     private final WorkoutLogRepository workoutLogRepository;
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
+    private final ScheduledWorkoutRepository scheduledWorkoutRepository;
     private final Clock clock;
 
     @Autowired
     public WorkoutService(
             WorkoutLogRepository workoutLogRepository,
             UserRepository userRepository,
-            UserProfileRepository userProfileRepository) {
-        this(workoutLogRepository, userRepository, userProfileRepository, Clock.systemUTC());
+            UserProfileRepository userProfileRepository,
+            ScheduledWorkoutRepository scheduledWorkoutRepository) {
+        this(
+                workoutLogRepository,
+                userRepository,
+                userProfileRepository,
+                scheduledWorkoutRepository,
+                Clock.systemUTC()
+        );
     }
 
     WorkoutService(
@@ -44,9 +54,19 @@ public class WorkoutService {
             UserRepository userRepository,
             UserProfileRepository userProfileRepository,
             Clock clock) {
+        this(workoutLogRepository, userRepository, userProfileRepository, null, clock);
+    }
+
+    WorkoutService(
+            WorkoutLogRepository workoutLogRepository,
+            UserRepository userRepository,
+            UserProfileRepository userProfileRepository,
+            ScheduledWorkoutRepository scheduledWorkoutRepository,
+            Clock clock) {
         this.workoutLogRepository = workoutLogRepository;
         this.userRepository = userRepository;
         this.userProfileRepository = userProfileRepository;
+        this.scheduledWorkoutRepository = scheduledWorkoutRepository;
         this.clock = clock;
     }
 
@@ -163,6 +183,15 @@ public class WorkoutService {
                         newAdaptationScore
                 )
         );
+
+        if (scheduledWorkoutRepository != null) {
+            scheduledWorkoutRepository.findByUserIdAndScheduledDate(userId, localDate)
+                    .ifPresent(scheduled -> {
+                        scheduled.setStatus(ScheduledWorkoutStatus.COMPLETED);
+                        scheduled.setCompletedWorkoutId(savedLog.getId());
+                        scheduledWorkoutRepository.save(scheduled);
+                    });
+        }
 
         return new CompleteWorkoutResponse(
                 WorkoutLogResponse.from(savedLog),

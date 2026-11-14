@@ -2,6 +2,15 @@
 
 Todos los cambios notables de **CalisHome** siguen versionamiento semántico (`SemVer`).
 
+## [1.1.0] - 2026-11-13 (Diferenciación Competitiva: Biomecánica Animada, Agenda Real, Dieta & Coach Cuantitativo)
+
+### Novedades de Producto y Arquitectura
+- **Motor Visual Biomecánico Libre de Copyright (`ExerciseVisualizer`):** Animación SVG articular interpolada para los **24 ejercicios** del catálogo (`100%` offline, compatible con CSP estricta, control `0.5× Técnica` vs `1× Tempo`, fases `Excéntrica` / `Isometría` / `Concéntrica`, indicadores de músculo activo Kinetic Volt), integrado en `WorkoutPlayer`, Códex de Ejercicios y Árbol de Habilidades.
+- **Agenda por Fechas + Verificación Automática de Faltas (`V6__planning_nutrition_coaching.sql`):** Endpoints `/api/v1/schedule/*` que autopoblan semanas futuras, marcan sesiones pasadas sin registro como `MISSED`, guardan motivo y permiten reprogramar en 1 clic (`RESCHEDULED`) verificando adherencia real de 14 días.
+- **Plan de Desarrollo a 12 Semanas, Árboles de Calistenia y Matriz Muscular 48h:** Periodización en 3 fases adaptada a `resistencia_quemagrasa`, `fuerza_hipertrofia` o `movilidad_salud`, desbloqueo progresivo en 4 cadenas técnicas y recuperación tisular calculada desde `workout_logs`.
+- **Monitoreo Nutricional e Hidratación (Mifflin-St Jeor):** Endpoints `/api/v1/nutrition/*` con biometría (`peso`, `estatura`, `edad`, `sexo`, `actividad`, `agua`), metas dinámicas de calorías/macros, registro diario rápido o personalizado, promedios móviles de 7 días e integración con exportación JSON ARCO (`/api/v1/users/me/export`).
+- **Coach Cuantitativo sin Mensajes Preprogramados:** Endpoint `GET /api/v1/coaching/insights` respaldado por telemetría real en PostgreSQL (evidencia exacta de faltas, desviación calórica y proteica en `g/kg`, déficit hídrico y carga por RPE).
+
 ## [1.0.0] - 2026-11-13 (Lanzamiento Comercial & Portfolio)
 
 ### Fase 8 — Producción, Operación, Privacidad y Portfolio
