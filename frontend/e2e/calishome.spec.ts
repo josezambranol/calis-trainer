@@ -199,6 +199,8 @@ test.describe('CalisHome Full SaaS E2E', () => {
     const techniqueModal = page.getByTestId('technique-modal');
     await expect(techniqueModal).toBeVisible();
     await expect(techniqueModal.locator('[data-testid^="exercise-visualizer-"]')).toBeVisible();
+    await expect(techniqueModal.locator('[data-testid^="three-anatomy-"] canvas')).toBeVisible({ timeout: 10_000 });
+    await techniqueModal.getByRole('button', { name: 'Vista 3D Lateral' }).click();
     await expect(techniqueModal.getByText(/Ejecución Paso a Paso/i)).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(techniqueModal).toBeHidden();
