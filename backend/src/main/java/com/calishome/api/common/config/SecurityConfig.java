@@ -1,10 +1,19 @@
 package com.calishome.api.common.config;
 
+import com.calishome.api.auth.AuthProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.function.Supplier;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -12,10 +21,27 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.csrf.CsrfTokenRequestHandler;
+import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.util.StringUtils;
 
 @Configuration
 @EnableWebSecurity
+@EnableConfigurationProperties(AuthProperties.class)
 public class SecurityConfig {
 
     private final ObjectMapper objectMapper;
@@ -25,16 +51,69 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public PasswordEncoder passwordEncoder() {
+        return Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8();
+    }
+
+    @Bean
+    public SecretKey jwtSecretKey(AuthProperties authProperties) {
+        byte[] keyBytes = authProperties.jwt().secret().getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException("app.auth.jwt.secret debe tener al menos 32 bytes (256 bits).");
+        }
+        return new SecretKeySpec(keyBytes, "HmacSHA256");
+    }
+
+    @Bean
+    public JwtEncoder jwtEncoder(SecretKey jwtSecretKey) {
+        return new NimbusJwtEncoder(new ImmutableSecret<>(jwtSecretKey));
+    }
+
+    @Bean
+    public JwtDecoder jwtDecoder(SecretKey jwtSecretKey) {
+        return NimbusJwtDecoder.withSecretKey(jwtSecretKey)
+                .macAlgorithm(MacAlgorithm.HS256)
+                .build();
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtDecoder jwtDecoder) throws Exception {
+        CookieCsrfTokenRepository csrfRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        csrfRepository.setCookiePath("/");
+
+        // Solo exigimos CSRF en los endpoints que dependen de cookie HttpOnly (refresh/logout)
+        PathPatternRequestMatcher.Builder mvcMatcher = PathPatternRequestMatcher.withDefaults();
+        RequestMatcher csrfProtectedRoutes = new OrRequestMatcher(
+                mvcMatcher.matcher(HttpMethod.POST, "/api/v1/auth/refresh"),
+                mvcMatcher.matcher(HttpMethod.POST, "/api/v1/auth/logout")
+        );
+
         return http
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(csrfRepository)
+                        .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
+                        .requireCsrfProtectionMatcher(csrfProtectedRoutes)
+                )
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(jwt -> jwt.decoder(jwtDecoder))
+                        .authenticationEntryPoint((request, response, authException) ->
+                                writeProblemDetail(
+                                        response,
+                                        request,
+                                        HttpStatus.UNAUTHORIZED,
+                                        "No autorizado",
+                                        "Se requiere autenticación válida para acceder a este recurso.",
+                                        "unauthorized"
+                                ))
+                )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/v1/health",
+                                "/api/v1/auth/**",
                                 "/actuator/health",
                                 "/actuator/health/**",
                                 "/v3/api-docs/**",
@@ -44,20 +123,62 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((request, response, authException) -> {
-                            ProblemDetail problem = ProblemDetail.forStatusAndDetail(
-                                    HttpStatus.UNAUTHORIZED,
-                                    "Se requiere autenticación para acceder a este recurso."
-                            );
-                            problem.setTitle("No autorizado");
-                            problem.setType(URI.create("https://calishome.app/errors/unauthorized"));
-                            problem.setInstance(URI.create(request.getRequestURI()));
-
-                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                            response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-                            objectMapper.writeValue(response.getOutputStream(), problem);
-                        })
+                        .authenticationEntryPoint((request, response, authException) ->
+                                writeProblemDetail(
+                                        response,
+                                        request,
+                                        HttpStatus.UNAUTHORIZED,
+                                        "No autorizado",
+                                        "Se requiere autenticación para acceder a este recurso.",
+                                        "unauthorized"
+                                ))
+                        .accessDeniedHandler((request, response, accessDeniedException) ->
+                                writeProblemDetail(
+                                        response,
+                                        request,
+                                        HttpStatus.FORBIDDEN,
+                                        "Acceso denegado",
+                                        "No tienes permisos o falta un token CSRF válido para realizar esta acción.",
+                                        "forbidden"
+                                ))
                 )
                 .build();
+    }
+
+    private void writeProblemDetail(
+            HttpServletResponse response,
+            HttpServletRequest request,
+            HttpStatus status,
+            String title,
+            String detail,
+            String slug) throws java.io.IOException {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
+        problem.setTitle(title);
+        problem.setType(URI.create("https://calishome.app/errors/" + slug));
+        problem.setInstance(URI.create(request.getRequestURI()));
+
+        response.setStatus(status.value());
+        response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+        objectMapper.writeValue(response.getOutputStream(), problem);
+    }
+
+    /**
+     * Implementación recomendada por Spring Security 6 para SPAs con CookieCsrfTokenRepository.
+     */
+    static final class SpaCsrfTokenRequestHandler extends CsrfTokenRequestAttributeHandler {
+        private final CsrfTokenRequestHandler delegate = new XorCsrfTokenRequestAttributeHandler();
+
+        @Override
+        public void handle(HttpServletRequest request, HttpServletResponse response, Supplier<CsrfToken> csrfToken) {
+            this.delegate.handle(request, response, csrfToken);
+        }
+
+        @Override
+        public String resolveCsrfTokenValue(HttpServletRequest request, CsrfToken csrfToken) {
+            if (StringUtils.hasText(request.getHeader(csrfToken.getHeaderName()))) {
+                return super.resolveCsrfTokenValue(request, csrfToken);
+            }
+            return this.delegate.resolveCsrfTokenValue(request, csrfToken);
+        }
     }
 }

@@ -26,3 +26,22 @@ management:
   endpoint:
     health:
       show-details: when_authorized
+
+app:
+  auth:
+    jwt:
+      issuer: ${JWT_ISSUER:calishome-api}
+      access-token-ttl-minutes: 15
+    refresh:
+      ttl-days: 30
+      cookie-name: calishome_refresh
+      cookie-same-site: ${COOKIE_SAME_SITE:Lax}
+    google:
+      client-id: ${GOOGLE_CLIENT_ID:}
+    frontend-url: ${FRONTEND_URL:http://localhost:5173}
+    lockout:
+      max-attempts: 5
+      duration-minutes: 15
+    rate-limit:
+      enabled: true
+      requests-per-minute: 10

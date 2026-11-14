@@ -20,6 +20,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    @ExceptionHandler(ApiException.class)
+    public ProblemDetail handleApiException(ApiException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(ex.getStatus(), ex.getMessage());
+        problem.setTitle(ex.getTitle());
+        problem.setType(ex.getType());
+        return problem;
+    }
+
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
             MethodArgumentNotValidException ex,

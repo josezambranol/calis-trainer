@@ -10,6 +10,14 @@ springdoc:
   swagger-ui:
     enabled: true
 
+app:
+  auth:
+    jwt:
+      # Solo para desarrollo local; en prod debe venir por variable de entorno
+      secret: ${JWT_SECRET:dev-only-calishome-secret-key-at-least-32-bytes-long-2026}
+    refresh:
+      cookie-secure: false
+
 logging:
   level:
     com.calishome.api: DEBUG

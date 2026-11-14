@@ -11,6 +11,17 @@ springdoc:
   swagger-ui:
     enabled: false
 
+app:
+  auth:
+    jwt:
+      secret: test-only-calishome-secret-key-at-least-32-bytes-long-2026
+    refresh:
+      cookie-secure: false
+    google:
+      client-id: test-google-client-id.apps.googleusercontent.com
+    rate-limit:
+      enabled: false
+
 logging:
   level:
     com.calishome.api: INFO
